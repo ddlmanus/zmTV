@@ -29,6 +29,17 @@
 
 当前公开构建未进行 Apple、Microsoft 和 Android 商店签名。macOS 首次打开时需要在“隐私与安全性”中允许该应用；Android 需要允许安装来自浏览器或文件管理器的应用。源码与安装包均受非商业许可证约束。
 
+### macOS 提示“已损坏，无法打开”
+
+这通常是因为当前社区版没有 Apple Developer ID 签名和公证，被 macOS Gatekeeper 拦截，并不等于 DMG 文件真的损坏。请确认安装包来自本项目的 [GitHub Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7)，将应用拖入“应用程序”后执行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/造梦影视与设计工作流.app"
+open "/Applications/造梦影视与设计工作流.app"
+```
+
+不要全局关闭 Gatekeeper。若安装包 SHA-256 与发布值不一致，请删除后重新下载，不要绕过安全检查。架构选择、权限处理、文件校验以及 Windows/Android 安装提示见 [安装与常见安全提示](docs/installation.md)。
+
 版本改动见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 功能截图
