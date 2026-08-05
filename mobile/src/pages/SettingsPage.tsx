@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useApiKeyStore } from "@/stores/apiKeyStore";
-import { apiClient } from "@/api/client";
+import { ZAOMENG_OPEN_API_BASE_URL, apiClient } from "@/api/client";
+import { useApiServiceStore } from "@/stores/apiServiceStore";
 import { useThemeStore, type Theme } from "@/stores/themeStore";
 import { languages } from "@/i18n";
 import { Button } from "@/components/ui/button";
@@ -88,6 +89,7 @@ export function SettingsPage() {
     validateApiKey,
   } = useApiKeyStore();
   const { theme, setTheme } = useThemeStore();
+  const { baseUrl, loadServiceConfig } = useApiServiceStore();
   const [inputKey, setInputKey] = useState(apiKey);
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -124,7 +126,7 @@ export function SettingsPage() {
   } | null>(null);
 
   // Current app version - keep in sync with package.json and build.gradle
-  const currentVersion = "2.1.5";
+  const currentVersion = "2.1.9";
 
   // (APK download progress state removed - now opens browser directly)
 
@@ -868,8 +870,9 @@ export function SettingsPage() {
 
   // Load settings on mount
   useEffect(() => {
+    loadServiceConfig();
     loadCacheDetails();
-  }, [loadCacheDetails]);
+  }, [loadCacheDetails, loadServiceConfig]);
 
   // Fetch balance when authenticated
   useEffect(() => {
@@ -960,11 +963,44 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>API 服务</CardTitle>
+              <CardDescription>
+                模型、生成、上传、任务轮询、余额和历史记录统一使用造梦 API
+                开放平台。
+              </CardDescription>
+            </div>
+            <Badge variant="secondary" className="shrink-0">
+              固定平台
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-[88px_1fr] items-center gap-3 text-sm">
+            <Label>平台</Label>
+            <div className="font-medium">造梦 API 开放平台</div>
+            <Label>Base URL</Label>
+            <a
+              href={ZAOMENG_OPEN_API_BASE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-w-0 items-center gap-2 font-mono text-sm text-primary hover:underline"
+            >
+              <Globe className="h-4 w-4 shrink-0" />
+              <span className="truncate">{baseUrl}</span>
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>{t("settings.apiKey.title")}</CardTitle>
               <CardDescription>
-                {t("settings.apiKey.description")}
+                输入造梦 API 开放平台令牌，用于验证账户并加载模型。
               </CardDescription>
             </div>
             {apiKey && storeIsValidating && (
@@ -1011,12 +1047,12 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               {t("settings.apiKey.getKey")}{" "}
               <a
-                href="https://wavespeed.ai/accesskey"
+                href={ZAOMENG_OPEN_API_BASE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                wavespeed.ai/accesskey
+                造梦 API 开放平台
               </a>
             </p>
           </div>
