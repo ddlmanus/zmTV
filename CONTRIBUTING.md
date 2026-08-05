@@ -5,7 +5,7 @@
 ## 本地检查
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 npx prettier --check <本次修改的文件>
 npx tsc --noEmit
 npm run build

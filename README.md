@@ -34,7 +34,7 @@
 ```bash
 git clone https://github.com/ddlmanus/zmTV.git
 cd zmTV
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 
@@ -97,6 +97,7 @@ mobile/                           Android 应用
 ## 开发
 
 ```bash
+npm install --legacy-peer-deps
 npx prettier --check <本次修改的文件>
 npx tsc --noEmit
 npm run build
