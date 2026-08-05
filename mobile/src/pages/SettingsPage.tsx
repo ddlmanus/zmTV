@@ -977,7 +977,7 @@ export function SettingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-[88px_1fr] items-center gap-3 text-sm">
+          <div className="grid gap-3 sm:grid-cols-[140px_1fr] sm:items-center">
             <Label>平台</Label>
             <div className="font-medium">造梦 API 开放平台</div>
             <Label>Base URL</Label>
