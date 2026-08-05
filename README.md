@@ -19,13 +19,13 @@
 
 在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7) 下载已经构建好的安装包，无需自行配置开发环境。
 
-| 平台                | 安装包                                      |
-| ------------------- | ------------------------------------------- |
-| macOS Apple Silicon | `zmTV-Desktop-mac-arm64.dmg`                |
-| macOS Intel         | `zmTV-Desktop-mac-x64.dmg`                  |
-| Windows x64         | `zmTV-Desktop-win-x64.exe`                  |
-| Linux x64           | `zmTV-Desktop-linux-x64.AppImage` 或 `.deb` |
-| Android             | `zmTV-Android-2.1.7-unsigned.apk`           |
+| 平台                | 安装包                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| macOS Apple Silicon | [下载 DMG](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-mac-arm64.dmg)                                                                                                                   |
+| macOS Intel         | [下载 DMG](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-mac-x64.dmg)                                                                                                                     |
+| Windows x64         | [下载安装程序](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-win-x64.exe)                                                                                                                 |
+| Linux x64           | [下载 AppImage](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-x86_64.AppImage) / [下载 deb](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-amd64.deb) |
+| Android             | [下载 APK](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Android-2.1.7-unsigned.apk)                                                                                                              |
 
 当前公开构建未进行 Apple、Microsoft 和 Android 商店签名。macOS 首次打开时需要在“隐私与安全性”中允许该应用；Android 需要允许安装来自浏览器或文件管理器的应用。源码与安装包均受非商业许可证约束。
 
