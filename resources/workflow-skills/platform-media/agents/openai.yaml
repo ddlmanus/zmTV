@@ -1,0 +1,4 @@
+interface:
+  display_name: "平台媒体生成"
+  short_description: "通过造梦后台模型、会员和积分规则生成图片、视频、音频与 3D，并同步真实任务状态和持久化结果。"
+  default_prompt: "使用 $platform-media 完成当前任务，并交付经过检查的真实结果。"

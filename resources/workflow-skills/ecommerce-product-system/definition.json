@@ -1,0 +1,71 @@
+{
+  "id": "ecommerce_product_system",
+  "name": "商品主图与详情页组图",
+  "description": "复用造梦原全品类组图能力，基于真实商品图生成商品主图套组和商品详情页套组。",
+  "icon": "▦",
+  "color": "#0E7490",
+  "category": "电商商品视觉",
+  "scenarios": [
+    "商品主图",
+    "主图套图",
+    "商品详情页",
+    "详情页组图",
+    "全品类商品图",
+    "卖点图",
+    "电商组图",
+    "PDP",
+    "product main image",
+    "product detail page"
+  ],
+  "promptTemplate": "使用 $ecommerce-product-system 复用造梦原‘全品类组图’链路生成商品主图或详情页组图。必须使用真实商品参考图，保持商品身份一致；主图套组每张背景明显不同。\n\n用户需求：{userInput}",
+  "negativePrompt": "changed product, redesigned product, wrong shape, wrong packaging, wrong logo, wrong label, wrong material, invented structure, invented feature, fake certification, fake review, fake rating, misleading claim, repeated background, same scene, same pedestal, palette-only variation, collage, contact sheet, multi-panel, watermark, low quality",
+  "preferredModel": "auto",
+  "outputType": "image",
+  "aspectRatio": "3:4",
+  "analysisPrompt": "直接复用造梦原全品类组图的商品理解、复杂结构判断、design_specs、逐图 plan 和逐图提示词构建链路。主图模式强制逐图背景差异；详情页模式强制一屏一卖点和参考锁定依据。",
+  "tools": [
+    "image_generate"
+  ],
+  "displayName": "商品主图与详情页组图",
+  "shortDescription": "复用原全品类组图效果，生成高一致性的商品主图和详情页套组",
+  "skillIds": [
+    "ecommerce_product_system",
+    "ecommerce-product-system",
+    "product-commerce-system",
+    "ecommerce_product_image"
+  ],
+  "role": "造梦商品组图导演",
+  "agentType": "studio-genesis-commerce-director",
+  "workflowProfile": "studio-genesis-native",
+  "workflow": {
+    "mode": "guided",
+    "confirmationPolicy": "risk_based",
+    "stages": [
+      "确认真实商品参考图与生成模式",
+      "执行原生商品理解与复杂结构判断",
+      "生成整体规范与逐图设计计划",
+      "构建原生逐图提示词并通过造梦生成",
+      "检查商品一致性与逐图背景差异"
+    ],
+    "requiredInputs": [
+      {
+        "key": "product_reference",
+        "label": "真实商品参考图",
+        "required": true,
+        "blocking": true,
+        "accepts": [
+          "image",
+          "images"
+        ],
+        "prompt": "请至少上传一张能看清商品轮廓、颜色、材质、Logo、标签和结构的真实商品图片。"
+      }
+    ],
+    "capabilities": [
+      "reference_analysis",
+      "image_generation",
+      "task_status",
+      "multi_asset_planning",
+      "post_production_handoff"
+    ]
+  }
+}

@@ -1,0 +1,1049 @@
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Search,
+  Check,
+  X,
+  ChevronDown,
+  Star,
+  BarChart3,
+  Sparkles,
+  UserRound,
+  Music2,
+  Box,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { fuzzySearch } from "@/lib/fuzzySearch";
+import { useModelsStore } from "@/stores/modelsStore";
+import { findFamilyByVariantId } from "@/lib/smartFormConfig";
+import {
+  findCuratedGeneratorProduct,
+  getCuratedGeneratorProductRank,
+} from "@/lib/curatedGeneratorCatalog";
+import type { Model } from "@/types/model";
+
+interface ModelSelectorProps {
+  models: Model[];
+  value: string | undefined;
+  onChange: (modelId: string) => void;
+  disabled?: boolean;
+  hideVariantSelector?: boolean;
+  variant?: "default" | "video" | "avatar" | "audio" | "3d";
+}
+
+type ModelBadge = {
+  label: "NEW" | "HOT";
+  className: string;
+};
+
+/** First two path segments = family. e.g. "bytedance/seedream-v5.0-lite/edit" → "bytedance/seedream-v5.0-lite" */
+function getModelFamily(modelId: string): string {
+  const parts = modelId.split("/");
+  if (parts.length <= 2) return modelId;
+  return parts.slice(0, 2).join("/");
+}
+
+/** Keep the complete model segment: speed and tier suffixes identify models. */
+function getBaseFamily(modelId: string): string {
+  return getModelFamily(modelId);
+}
+
+function getVideoGroupKey(modelId: string): string {
+  const lower = modelId.toLowerCase();
+  const parts = modelId.split("/");
+  const provider = parts[0] || modelId;
+  const family = parts[1] || "";
+
+  if (parts.length >= 3) {
+    return `${provider}/${family}`;
+  }
+
+  if (
+    lower.startsWith("bytedance/seedance-2.0") ||
+    lower.startsWith("bytedance/seedance-v2")
+  ) {
+    return "bytedance/seedance-2.0";
+  }
+  if (lower.startsWith("bytedance/seedance-v1.5-pro")) {
+    return "bytedance/seedance-v1.5-pro";
+  }
+
+  if (provider === "kwaivgi") {
+    const normalizedKling = family
+      .replace(/-4k$/i, "")
+      .replace(/-pro$/i, "")
+      .replace(/-std$/i, "")
+      .replace(/-standard$/i, "")
+      .replace(/-master$/i, "");
+    if (normalizedKling !== family && normalizedKling.includes("kling")) {
+      return `${provider}/${normalizedKling}`;
+    }
+  }
+
+  if (provider === "openai" && family.startsWith("sora-2")) {
+    return "openai/sora-2";
+  }
+
+  if (provider === "google") {
+    if (family === "veo3-fast") return "google/veo3";
+    if (family === "veo3.1-fast") return "google/veo3.1";
+  }
+
+  return `${provider}/${family.replace(/-fast$/i, "")}`;
+}
+
+function getAvatarGroupKey(modelId: string): string {
+  return (
+    findCuratedGeneratorProduct("avatar", modelId)?.key ??
+    getBaseFamily(modelId)
+  );
+}
+
+function getAudioGroupKey(modelId: string): string {
+  return (
+    findCuratedGeneratorProduct("audio", modelId)?.key ?? getBaseFamily(modelId)
+  );
+}
+
+function get3DGroupKey(modelId: string): string {
+  const parts = modelId.split("/");
+  const provider = parts[0] || modelId;
+  const family = parts[1] || "";
+  const variant = parts[2] || "";
+  const id = modelId.toLowerCase();
+
+  if (provider === "wavespeed-ai" && family === "hunyuan3d") {
+    if (variant.startsWith("v2")) return "wavespeed-ai/hunyuan3d/v2";
+    return `${provider}/${family}`;
+  }
+
+  if (id.startsWith("wavespeed-ai/hunyuan-3d-v3.1/")) {
+    return "wavespeed-ai/hunyuan-3d-v3.1";
+  }
+
+  return getModelFamily(modelId);
+}
+
+/** Provider = first segment. e.g. "bytedance/seedream-v5.0-lite" → "bytedance" */
+function getProvider(modelId: string): string {
+  return modelId.split("/")[0] || modelId;
+}
+
+/** Family short name = second segment. e.g. "bytedance/seedream-v5.0-lite" → "seedream-v5.0-lite" */
+function getFamilyName(modelId: string): string {
+  const parts = modelId.split("/");
+  return parts[1] || parts[0];
+}
+
+/** Format a slug to title case. e.g. "nano-banana-pro" → "Nano Banana Pro" */
+function formatSlug(s: string): string {
+  return s
+    .split("-")
+    .map((w) => {
+      const lower = w.toLowerCase();
+      if (["ai", "api", "gpt", "sd", "xl", "hd", "uhd", "3d"].includes(lower)) {
+        return lower.toUpperCase();
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
+
+/** Readable type label: "text-to-video" → "Text To Video" */
+function formatType(type: string): string {
+  return type
+    .split("-")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Get a short display label for a variant within its base family group.
+ * Shows the distinguishing parts: family suffix + path suffix.
+ * e.g. for base "wavespeed-ai/infinitetalk":
+ *   "wavespeed-ai/infinitetalk/video-to-video" → "video-to-video"
+ *   "wavespeed-ai/infinitetalk-fast/video-to-video" → "fast / video-to-video"
+ *   "wavespeed-ai/infinitetalk" → "infinitetalk"
+ */
+function getVariantLabel(modelId: string, baseFamily: string): string {
+  const family = getModelFamily(modelId);
+  const baseParts = baseFamily.split("/");
+  const familyParts = family.split("/");
+
+  // Difference in the second segment (e.g. "infinitetalk-fast" vs base "infinitetalk" → "fast")
+  const baseName = baseParts[1] || "";
+  const familyName = familyParts[1] || "";
+  let speedSuffix = "";
+  if (familyName !== baseName && familyName.startsWith(baseName)) {
+    speedSuffix = familyName.slice(baseName.length + 1); // strip the leading "-"
+  }
+
+  // Path suffix after the family (e.g. "/video-to-video")
+  const pathSuffix =
+    modelId.length > family.length ? modelId.slice(family.length + 1) : "";
+
+  if (speedSuffix && pathSuffix) return `${speedSuffix} / ${pathSuffix}`;
+  if (speedSuffix) return speedSuffix;
+  if (pathSuffix) return pathSuffix;
+  return familyName;
+}
+
+function normalizeDisplayName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+}
+
+function getVideoDisplayName(model: Model): string {
+  const id = model.model_id.toLowerCase();
+  const familyName = getFamilyName(model.model_id).toLowerCase();
+  const family = findFamilyByVariantId(model.model_id);
+
+  if (familyName === "seedance-2.0-fast") return "Seedance 2.0 Fast";
+  if (familyName === "seedance-2.0-mini") return "Seedance 2.0 Mini";
+  if (familyName === "seedance-2.0" || familyName === "seedance-v2.0")
+    return "Seedance 2.0";
+  if (id.includes("seedance-v1.5-pro")) return "Seedance 1.5 Pro";
+  if (/(?:^|-)(?:fast|mini|pro|std|standard|4k|master)$/.test(familyName)) {
+    return formatSlug(familyName)
+      .replace(/^Kling V/i, "Kling ")
+      .replace(/^Veo(?=\d)/i, "Veo ")
+      .replace(/\bStd\b/g, "STD")
+      .replace(/\b4k\b/gi, "4K");
+  }
+  if (id.includes("wan-2.7")) return "WAN 2.7";
+  if (id.includes("wan-2.6")) return "WAN 2.6";
+  if (id.includes("wan-2.5")) return "WAN 2.5";
+  if (id.includes("wan-2.2-spicy")) return "WAN 2.2 Spicy";
+  if (id.includes("kling-v3") || id.includes("kling-3")) return "Kling 3.0";
+  if (id.includes("kling-o3")) return "Kling O3";
+  if (id.includes("kling-v2.6") || id.includes("kling-2.6")) return "Kling 2.6";
+  if (id.includes("sora-2")) return "Sora 2";
+  if (id.includes("veo-3.1-lite")) return "Veo 3.1 Lite";
+  if (id.includes("veo-3.1")) return "Veo 3.1";
+  if (id.includes("vidu-q3")) return "Vidu Q3";
+  if (id.includes("hailuo-2.3")) return "Hailuo 2.3";
+  if (id.includes("grok-imagine")) return "Grok Imagine";
+  if (id.includes("happy-horse")) return "Happy Horse 1.0";
+
+  return (
+    family?.name || model.name || formatSlug(getFamilyName(model.model_id))
+  );
+}
+
+function getAvatarDisplayName(model: Model): string {
+  const curatedProduct = findCuratedGeneratorProduct("avatar", model.model_id);
+  if (curatedProduct) return curatedProduct.name;
+
+  const family = findFamilyByVariantId(model.model_id);
+
+  return (
+    family?.name || model.name || formatSlug(getFamilyName(model.model_id))
+  );
+}
+
+function normalizeAudioDisplayLabel(value: string): string {
+  return value
+    .replace(/\bTts\b/g, "TTS")
+    .replace(/\bAi\b/g, "AI")
+    .replace(/\bApi\b/g, "API");
+}
+
+function getAudioDisplayName(model: Model): string {
+  const curatedProduct = findCuratedGeneratorProduct("audio", model.model_id);
+  if (curatedProduct) return curatedProduct.name;
+
+  const family = findFamilyByVariantId(model.model_id);
+  return normalizeAudioDisplayLabel(
+    family?.name || formatSlug(getFamilyName(model.model_id)),
+  );
+}
+
+function normalize3DDisplayLabel(value: string): string {
+  return value
+    .replace(/\b3d\b/gi, "3D")
+    .replace(/\bV(\d)/g, "V$1")
+    .replace(/\bH(\d)/g, "H$1");
+}
+
+function get3DDisplayName(model: Model): string {
+  const provider = getProvider(model.model_id).toLowerCase();
+  const familyName = getFamilyName(model.model_id);
+  const family = findFamilyByVariantId(model.model_id);
+  const formatted = normalize3DDisplayLabel(
+    family?.name || formatSlug(familyName),
+  );
+
+  if (provider === "tripo3d") {
+    if (familyName.toLowerCase().includes("triposplat")) return "TripoSplat";
+    return `Tripo3D ${formatted}`;
+  }
+  if (provider === "hyper3d") {
+    return formatted.replace(/^Rodin/i, "Rodin");
+  }
+  if (familyName.toLowerCase().includes("hunyuan")) {
+    return formatted.replace(/^Hunyuan/i, "Hunyuan");
+  }
+  return formatted;
+}
+
+const VIDEO_MODEL_ORDER = [
+  "seedance-2.0",
+  "seedance-2.0-turbo",
+  "happy-horse-1.0",
+  "wan-2.7",
+  "wan-2.6",
+  "wan-2.5",
+  "wan-2.2-spicy",
+  "kling-3.0",
+  "kling-o3",
+  "kling-2.6",
+  "seedance-1.5-pro",
+  "sora-2",
+  "veo-3.1",
+  "veo-3.1-lite",
+  "vidu-q3",
+  "hailuo-2.3",
+  "grok-imagine",
+];
+
+const THREE_D_MODEL_ORDER = [
+  "tripo3d-h3.1",
+  "triposplat",
+  "tripo3d-v2.5",
+  "rodin-v2.5",
+  "rodin-v2",
+  "hunyuan-3d-v3.1",
+];
+
+function getVideoSortRank(model: Model): number {
+  const name = normalizeDisplayName(getVideoDisplayName(model));
+  const rank = VIDEO_MODEL_ORDER.findIndex((item) => name.includes(item));
+  return rank === -1 ? 1000 : rank;
+}
+
+function getVideoRepresentativeRank(model: Model): number {
+  const id = model.model_id.toLowerCase();
+  const type = (model.type || "").toLowerCase();
+
+  if (type.includes("text-to-video") || id.includes("text-to-video")) return 0;
+  if (type.includes("image-to-video") || id.includes("image-to-video"))
+    return 1;
+  if (id.includes("reference-to-video")) return 2;
+  if (id.includes("start-end-to-video") || id.includes("start-end-frame"))
+    return 3;
+  if (
+    type.includes("video-to-video") ||
+    id.includes("video-edit") ||
+    id.includes("edit-video")
+  )
+    return 4;
+  if (type.includes("video-extend") || id.includes("video-extend")) return 5;
+  return 10;
+}
+
+function getAvatarSortRank(model: Model): number {
+  return getCuratedGeneratorProductRank("avatar", model.model_id);
+}
+
+function getAudioSortRank(model: Model): number {
+  return getCuratedGeneratorProductRank("audio", model.model_id);
+}
+
+function get3DSortRank(model: Model): number {
+  const name = normalizeDisplayName(get3DDisplayName(model));
+  const rank = THREE_D_MODEL_ORDER.findIndex((item) => name.includes(item));
+  return rank === -1 ? 1000 : rank;
+}
+
+function get3DRepresentativeRank(model: Model): number {
+  const id = model.model_id.toLowerCase();
+  if (id.includes("text-to-3d")) return 0;
+  if (id.includes("image-to-3d")) return 1;
+  if (id.includes("sketch-to-3d")) return 2;
+  if (id.includes("multiview") || id.includes("multi-view")) return 3;
+  return 10;
+}
+
+function getModelBadge(modelId: string | undefined): ModelBadge | null {
+  if (!modelId) return null;
+  const family = getModelFamily(modelId).toLowerCase();
+  const id = modelId.toLowerCase();
+
+  if (family === "openai/gpt-image-2" || id.includes("openai/gpt-image-2")) {
+    return {
+      label: "NEW",
+      className: "bg-secondary text-primary shadow-primary/10",
+    };
+  }
+
+  if (
+    id.includes("happy-horse") ||
+    id.includes("longcat") ||
+    id.includes("tripo3d/h3.1") ||
+    (id.includes("pixverse") && id.includes("mimic"))
+  ) {
+    return {
+      label: "NEW",
+      className: "bg-secondary text-primary shadow-primary/10",
+    };
+  }
+
+  if (
+    family.includes("seedance-2.0") ||
+    family.includes("seedance-v2.0") ||
+    id.includes("seedance-2.0") ||
+    family.includes("nano-banana-2") ||
+    family.includes("nano-banana-pro") ||
+    family.includes("seedream-v4.5") ||
+    family.includes("seedream-4.5") ||
+    family.includes("wan-2.7") ||
+    family.includes("wan-2.2-spicy") ||
+    family.includes("kling-o3") ||
+    family.includes("kling-v3") ||
+    family.includes("veo-3.1-lite") ||
+    id.includes("qwen3-tts") ||
+    id.includes("infinitetalk") ||
+    id.includes("skyreels-v3-pro")
+  ) {
+    return {
+      label: "HOT",
+      className: "bg-primary text-primary-foreground shadow-primary/20",
+    };
+  }
+
+  return null;
+}
+
+function getModelGlyph(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.includes("seedance")) return "";
+  if (id.includes("kling")) return "K";
+  if (id.includes("wan")) return "W";
+  if (id.includes("sora")) return "O";
+  if (id.includes("veo")) return "G";
+  if (id.includes("vidu")) return "V";
+  if (id.includes("hailuo")) return "H";
+  if (id.includes("grok")) return "X";
+  if (id.includes("pixverse")) return "P";
+  return "";
+}
+
+function ModelIcon({
+  modelId,
+  variant,
+}: {
+  modelId: string;
+  variant: "default" | "video" | "avatar" | "audio" | "3d";
+}) {
+  if (variant === "default") return null;
+  const glyph = getModelGlyph(modelId);
+  return (
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center text-muted-foreground">
+      {glyph ? (
+        <span className="text-sm font-semibold leading-none">{glyph}</span>
+      ) : modelId.toLowerCase().includes("seedance") ? (
+        <BarChart3 className="h-4 w-4" />
+      ) : variant === "avatar" ? (
+        <UserRound className="h-4 w-4" />
+      ) : variant === "audio" ? (
+        <Music2 className="h-4 w-4" />
+      ) : variant === "3d" ? (
+        <Box className="h-4 w-4" />
+      ) : (
+        <Sparkles className="h-4 w-4" />
+      )}
+    </span>
+  );
+}
+
+function ModelTag({ badge }: { badge: ModelBadge }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-4 shrink-0 items-center rounded px-1.5 text-[10px] font-bold leading-none shadow-sm",
+        badge.className,
+      )}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
+export function ModelSelector({
+  models,
+  value,
+  onChange,
+  disabled,
+  hideVariantSelector = false,
+  variant = "default",
+}: ModelSelectorProps) {
+  const { t } = useTranslation();
+  const isVideoVariant = variant === "video";
+  const isAvatarVariant = variant === "avatar";
+  const isAudioVariant = variant === "audio";
+  const is3DVariant = variant === "3d";
+  const isCompactVariant =
+    isVideoVariant || isAvatarVariant || isAudioVariant || is3DVariant;
+  const isFavorite = useModelsStore((s) => s.isFavorite);
+  const [isOpen, setIsOpen] = useState(false);
+  const [variantOpen, setVariantOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const variantRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selectedModel = models.find((m) => m.model_id === value);
+  const currentBaseFamily = value ? getBaseFamily(value) : "";
+  const selectedBadge = getModelBadge(value);
+  const selectedDisplayName = selectedModel
+    ? isVideoVariant
+      ? getVideoDisplayName(selectedModel)
+      : isAvatarVariant
+        ? getAvatarDisplayName(selectedModel)
+        : isAudioVariant
+          ? getAudioDisplayName(selectedModel)
+          : is3DVariant
+            ? get3DDisplayName(selectedModel)
+            : formatSlug(getFamilyName(selectedModel.model_id))
+    : "";
+
+  // Family variants: all models sharing the same base family (includes speed variants like -fast, -turbo)
+  const familyVariants = useMemo(() => {
+    if (!value) return [];
+    const base = getBaseFamily(value);
+    return models
+      .filter((m) => getBaseFamily(m.model_id) === base)
+      .sort((a, b) => a.model_id.localeCompare(b.model_id));
+  }, [models, value]);
+
+  // Group variants by model.type for the dropdown optgroups
+  const variantsByType = useMemo(() => {
+    const groups = new Map<string, Model[]>();
+    for (const v of familyVariants) {
+      const type = v.type || "other";
+      const arr = groups.get(type) ?? [];
+      arr.push(v);
+      groups.set(type, arr);
+    }
+    return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [familyVariants]);
+
+  // Breadcrumb parts for the selected model
+  const breadcrumb = useMemo(() => {
+    if (!value) return null;
+    const provider = getProvider(value);
+    const familyName = getFamilyName(value);
+    return { provider, familyName };
+  }, [value]);
+
+  // Debounce search
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(
+      () => setDebouncedSearch(localSearch),
+      150,
+    );
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [localSearch]);
+
+  // Reset highlight when search results change
+  useEffect(() => {
+    setHighlightIndex(0);
+  }, [debouncedSearch]);
+
+  // Unique families: one representative model per base family
+  const familyModels = useMemo(() => {
+    const seen = new Set<string>();
+    return models.filter((m) => {
+      const family = getBaseFamily(m.model_id);
+      if (seen.has(family)) return false;
+      seen.add(family);
+      return true;
+    });
+  }, [models]);
+
+  const videoFamilyModels = useMemo(() => {
+    const bestByFamily = new Map<string, Model>();
+    for (const model of models) {
+      const key = getVideoGroupKey(model.model_id);
+      const current = bestByFamily.get(key);
+      if (
+        !current ||
+        getVideoRepresentativeRank(model) < getVideoRepresentativeRank(current)
+      ) {
+        bestByFamily.set(key, model);
+      }
+    }
+
+    return Array.from(bestByFamily.values()).sort((a, b) => {
+      const rankDiff = getVideoSortRank(a) - getVideoSortRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return getVideoDisplayName(a).localeCompare(getVideoDisplayName(b));
+    });
+  }, [models]);
+
+  const avatarFamilyModels = useMemo(() => {
+    const seen = new Set<string>();
+    return models
+      .filter((model) => {
+        const key = getAvatarGroupKey(model.model_id);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const rankDiff = getAvatarSortRank(a) - getAvatarSortRank(b);
+        if (rankDiff !== 0) return rankDiff;
+        return getAvatarDisplayName(a).localeCompare(getAvatarDisplayName(b));
+      });
+  }, [models]);
+
+  const audioFamilyModels = useMemo(() => {
+    const seen = new Set<string>();
+    return models
+      .filter((model) => {
+        const key = getAudioGroupKey(model.model_id);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const rankDiff = getAudioSortRank(a) - getAudioSortRank(b);
+        if (rankDiff !== 0) return rankDiff;
+        return getAudioDisplayName(a).localeCompare(getAudioDisplayName(b));
+      });
+  }, [models]);
+
+  const threeDFamilyModels = useMemo(() => {
+    const bestByFamily = new Map<string, Model>();
+    for (const model of models) {
+      const key = get3DGroupKey(model.model_id);
+      const current = bestByFamily.get(key);
+      if (
+        !current ||
+        get3DRepresentativeRank(model) < get3DRepresentativeRank(current)
+      ) {
+        bestByFamily.set(key, model);
+      }
+    }
+
+    return Array.from(bestByFamily.values()).sort((a, b) => {
+      const rankDiff = get3DSortRank(a) - get3DSortRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return get3DDisplayName(a).localeCompare(get3DDisplayName(b));
+    });
+  }, [models]);
+
+  const filteredModels = useMemo(() => {
+    const displayModels = isVideoVariant
+      ? videoFamilyModels
+      : isAvatarVariant
+        ? avatarFamilyModels
+        : isAudioVariant
+          ? audioFamilyModels
+          : is3DVariant
+            ? threeDFamilyModels
+            : familyModels;
+    if (!debouncedSearch.trim()) {
+      return isCompactVariant
+        ? displayModels
+        : [...displayModels].sort((a, b) =>
+            getModelFamily(a.model_id).localeCompare(
+              getModelFamily(b.model_id),
+            ),
+          );
+    }
+    // When variants are hidden, keep search at the family level as well.
+    const searchSource = hideVariantSelector ? displayModels : models;
+    return fuzzySearch(searchSource, debouncedSearch, (model) => [
+      isVideoVariant ? getVideoDisplayName(model) : "",
+      isAvatarVariant ? getAvatarDisplayName(model) : "",
+      isAudioVariant ? getAudioDisplayName(model) : "",
+      is3DVariant ? get3DDisplayName(model) : "",
+      getModelFamily(model.model_id),
+      model.name || "",
+      model.model_id,
+    ]).map((r) => r.item);
+  }, [
+    models,
+    familyModels,
+    videoFamilyModels,
+    avatarFamilyModels,
+    audioFamilyModels,
+    threeDFamilyModels,
+    debouncedSearch,
+    hideVariantSelector,
+    is3DVariant,
+    isAvatarVariant,
+    isAudioVariant,
+    isCompactVariant,
+    isVideoVariant,
+  ]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+        setLocalSearch("");
+        setDebouncedSearch("");
+      }
+      if (
+        variantRef.current &&
+        !variantRef.current.contains(e.target as Node)
+      ) {
+        setVariantOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) inputRef.current.focus();
+    if (isOpen && !localSearch) {
+      // Scroll to the selected model after the list renders
+      requestAnimationFrame(() => {
+        const list = listRef.current;
+        if (!list) return;
+        const selected = list.querySelector('[data-selected="true"]');
+        if (selected) {
+          selected.scrollIntoView({ block: "center" });
+        }
+      });
+    }
+  }, [isOpen]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        setLocalSearch("");
+        setDebouncedSearch("");
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightIndex((i) => (i < filteredModels.length - 1 ? i + 1 : 0));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightIndex((i) => (i > 0 ? i - 1 : filteredModels.length - 1));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (filteredModels.length > 0) {
+          const idx = Math.min(highlightIndex, filteredModels.length - 1);
+          onChange(filteredModels[idx].model_id);
+          setIsOpen(false);
+          setLocalSearch("");
+          setDebouncedSearch("");
+        }
+      }
+    },
+    [filteredModels, highlightIndex, onChange],
+  );
+
+  const handleSelect = useCallback(
+    (modelId: string) => {
+      onChange(modelId);
+      setIsOpen(false);
+      setLocalSearch("");
+      setDebouncedSearch("");
+    },
+    [onChange],
+  );
+
+  const handleClear = useCallback(() => {
+    setLocalSearch("");
+    setDebouncedSearch("");
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <div ref={containerRef}>
+      {/* Title — integrated into the card */}
+      <div
+        className={cn(
+          "space-y-2 mt-2",
+          isCompactVariant
+            ? ""
+            : "rounded-lg border border-border/60 bg-card/50 px-2 py-3",
+        )}
+      >
+        <div className="text-xs font-medium text-muted-foreground">
+          {isCompactVariant
+            ? t("playground.model", "模型")
+            : t("playground.modelSelector", "Model Selector")}
+        </div>
+        {/* Row 1: Breadcrumb / search trigger */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (!disabled) {
+                setIsOpen(!isOpen);
+                setVariantOpen(false);
+              }
+            }}
+            disabled={disabled}
+            className={cn(
+              "flex w-full items-center gap-2 border text-xs transition-all",
+              isCompactVariant
+                ? "h-12 rounded-xl border-border/60 bg-[hsl(var(--playground-panel)/0.78)] px-3 text-foreground shadow-[inset_0_1px_0_hsl(var(--playground-panel)/0.82)] hover:bg-[hsl(var(--playground-panel)/0.95)]"
+                : "h-8 rounded-lg border-input/70 bg-[hsl(var(--playground-panel)/0.68)] px-2 hover:bg-[hsl(var(--playground-panel)/0.88)]",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              isOpen && "border-primary/50 ring-2 ring-primary/10",
+            )}
+          >
+            {breadcrumb ? (
+              <span className="min-w-0 flex flex-1 items-center gap-2 text-left">
+                <ModelIcon modelId={value || ""} variant={variant} />
+                <span
+                  className="min-w-0 truncate text-sm font-medium text-foreground"
+                  title={selectedModel?.name || value}
+                >
+                  {hideVariantSelector
+                    ? selectedDisplayName
+                    : selectedModel?.name || formatSlug(breadcrumb.familyName)}
+                </span>
+                {selectedBadge && <ModelTag badge={selectedBadge} />}
+              </span>
+            ) : (
+              <span className="text-muted-foreground flex-1 text-left">
+                {t("playground.selectModel")}
+              </span>
+            )}
+            {isCompactVariant ? (
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground shrink-0 ml-auto transition-transform",
+                  isOpen && "rotate-180",
+                )}
+              />
+            ) : (
+              <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-auto" />
+            )}
+          </button>
+
+          {/* Search dropdown */}
+          {isOpen && (
+            <div
+              className={cn(
+                "absolute z-50 mt-1.5 w-full border shadow-xl animate-in fade-in-0 zoom-in-95",
+                isCompactVariant
+                  ? "rounded-xl border-[hsl(var(--playground-menu-border)/0.72)] bg-[linear-gradient(180deg,hsl(var(--playground-menu-surface)/0.98),hsl(var(--playground-menu)/0.98))] text-popover-foreground shadow-[0_22px_48px_hsl(var(--playground-sidebar)/0.18),inset_0_1px_0_hsl(var(--playground-panel)/0.5)] backdrop-blur-sm"
+                  : "rounded-xl border-[hsl(var(--playground-menu-border)/0.72)] bg-[linear-gradient(180deg,hsl(var(--playground-menu-surface)/0.98),hsl(var(--playground-menu)/0.98))]",
+              )}
+            >
+              <div className="flex items-center border-b border-[hsl(var(--playground-menu-border)/0.42)] bg-[hsl(var(--playground-panel)/0.22)] px-3">
+                <Search className="h-4 w-4 shrink-0 opacity-50" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t("playground.searchModels")}
+                  className="flex h-10 w-full bg-transparent px-2 py-3 text-sm outline-none placeholder:text-muted-foreground"
+                />
+                {localSearch && (
+                  <button
+                    onClick={handleClear}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div
+                ref={listRef}
+                className={cn(
+                  "overflow-auto p-1.5",
+                  isCompactVariant ? "max-h-[520px]" : "max-h-72",
+                )}
+              >
+                {filteredModels.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    {t("models.noResults")}
+                  </div>
+                ) : (
+                  filteredModels.map((model, idx) => {
+                    const isSelected =
+                      value &&
+                      (isVideoVariant
+                        ? getVideoGroupKey(value) ===
+                          getVideoGroupKey(model.model_id)
+                        : isAvatarVariant
+                          ? getAvatarGroupKey(value) ===
+                            getAvatarGroupKey(model.model_id)
+                          : isAudioVariant
+                            ? getAudioGroupKey(value) ===
+                              getAudioGroupKey(model.model_id)
+                            : is3DVariant
+                              ? get3DGroupKey(value) ===
+                                get3DGroupKey(model.model_id)
+                              : getBaseFamily(value) ===
+                                getBaseFamily(model.model_id));
+                    const isHighlighted = idx === highlightIndex;
+                    const family = getModelFamily(model.model_id);
+                    const displayName = isVideoVariant
+                      ? getVideoDisplayName(model)
+                      : isAvatarVariant
+                        ? getAvatarDisplayName(model)
+                        : isAudioVariant
+                          ? getAudioDisplayName(model)
+                          : is3DVariant
+                            ? get3DDisplayName(model)
+                            : hideVariantSelector
+                              ? formatSlug(getFamilyName(model.model_id))
+                              : model.name ||
+                                formatSlug(getFamilyName(model.model_id));
+                    const badge = getModelBadge(model.model_id);
+                    return (
+                      <button
+                        key={model.model_id}
+                        type="button"
+                        ref={(el) => {
+                          if (isHighlighted && el) {
+                            el.scrollIntoView({ block: "nearest" });
+                          }
+                        }}
+                        data-selected={isSelected || undefined}
+                        onClick={() => handleSelect(model.model_id)}
+                        onMouseEnter={() => setHighlightIndex(idx)}
+                        title={model.model_id}
+                        className={cn(
+                          "relative flex w-full cursor-pointer select-none items-center rounded-md text-sm outline-none",
+                          isCompactVariant
+                            ? "h-11 gap-2 px-2.5 text-foreground hover:bg-[hsl(var(--playground-menu-hover)/0.45)]"
+                            : "px-2 py-1.5 hover:bg-[hsl(var(--playground-menu-hover)/0.45)] hover:text-foreground",
+                          isHighlighted &&
+                            (isCompactVariant
+                              ? "bg-[hsl(var(--playground-menu-hover)/0.56)] text-foreground"
+                              : "bg-[hsl(var(--playground-menu-hover)/0.56)] text-foreground"),
+                          isSelected &&
+                            isCompactVariant &&
+                            "bg-primary text-primary-foreground shadow-[inset_3px_0_0_hsl(var(--playground-accent-hover))]",
+                        )}
+                      >
+                        <ModelIcon modelId={model.model_id} variant={variant} />
+                        <span
+                          className={cn(
+                            "min-w-0 flex flex-1 items-start",
+                            isCompactVariant ? "flex-row" : "flex-col",
+                          )}
+                        >
+                          <span className="flex max-w-full items-center gap-2">
+                            <span className="truncate font-medium">
+                              {displayName}
+                            </span>
+                            {badge && <ModelTag badge={badge} />}
+                          </span>
+                          {!isCompactVariant && (
+                            <span className="text-xs text-muted-foreground/60 truncate max-w-full">
+                              {family}
+                            </span>
+                          )}
+                        </span>
+                        {isFavorite(model.model_id) && (
+                          <Star className="ml-auto h-3.5 w-3.5 shrink-0 fill-yellow-400 text-yellow-400" />
+                        )}
+                        {isSelected && isCompactVariant && (
+                          <Check className="ml-2 h-4 w-4 shrink-0 text-primary-foreground" />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: Variant dropdown — custom popover */}
+        {!hideVariantSelector && selectedModel && familyVariants.length > 1 && (
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap shrink-0">
+              {t("playground.specificFunction", "Specific Model Function")}
+            </label>
+            <div ref={variantRef} className="relative flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setVariantOpen(!variantOpen);
+                  setIsOpen(false);
+                }}
+                className={cn(
+                  "flex h-8 w-full items-center gap-1 rounded-lg border border-input/80 bg-muted/40 px-2.5 text-sm transition-all cursor-pointer",
+                  "hover:bg-muted/60",
+                  variantOpen && "border-primary/50 ring-2 ring-primary/10",
+                )}
+              >
+                <span className="flex-1 text-left truncate">
+                  {getVariantLabel(value!, currentBaseFamily)}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform",
+                    variantOpen && "rotate-180",
+                  )}
+                />
+              </button>
+
+              {variantOpen && (
+                <div className="absolute z-50 mt-1 min-w-full w-max max-w-[280px] rounded-xl border border-[hsl(var(--playground-menu-border)/0.72)] bg-[linear-gradient(180deg,hsl(var(--playground-menu-surface)/0.98),hsl(var(--playground-menu)/0.98))] shadow-[0_18px_44px_hsl(var(--playground-sidebar)/0.16),inset_0_1px_0_hsl(var(--playground-panel)/0.42)] backdrop-blur-sm animate-in fade-in-0 zoom-in-95">
+                  <div className="max-h-60 overflow-auto p-1">
+                    {variantsByType.map(([type, variants], idx) => (
+                      <div key={type}>
+                        {idx > 0 && (
+                          <div className="mx-2 my-1 border-t border-border/50" />
+                        )}
+                        <div className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+                          {formatType(type)}
+                        </div>
+                        {variants.map((variant) => (
+                          <button
+                            key={variant.model_id}
+                            type="button"
+                            title={getVariantLabel(
+                              variant.model_id,
+                              currentBaseFamily,
+                            )}
+                            onClick={() => {
+                              onChange(variant.model_id);
+                              setVariantOpen(false);
+                            }}
+                            className={cn(
+                              "relative flex w-full cursor-pointer select-none items-center justify-between rounded-lg px-2 py-1 text-sm outline-none",
+                              "hover:bg-[hsl(var(--playground-menu-hover)/0.52)] hover:text-foreground",
+                              variant.model_id === value &&
+                                "bg-[hsl(var(--primary)/0.14)] text-foreground font-medium shadow-[inset_3px_0_0_hsl(var(--playground-accent-hover))]",
+                            )}
+                          >
+                            <span className="truncate">
+                              {getVariantLabel(
+                                variant.model_id,
+                                currentBaseFamily,
+                              )}
+                            </span>
+                            {variant.model_id === value && (
+                              <Check className="ml-2 h-3.5 w-3.5 shrink-0" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

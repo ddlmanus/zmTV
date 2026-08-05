@@ -1,0 +1,6 @@
+interface:
+  display_name: "商品主图与详情页组图"
+  short_description: "复用原全品类组图效果，生成高一致性的商品主图和详情页套组"
+  default_prompt: "使用 $ecommerce-product-system 根据真实商品参考图生成商品主图或商品详情页组图，并沿用造梦原全品类组图链路。"
+policy:
+  allow_implicit_invocation: true

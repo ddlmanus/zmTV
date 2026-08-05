@@ -1,0 +1,60 @@
+{
+  "id": "platform_media",
+  "name": "平台媒体生成",
+  "description": "通过造梦后台模型、会员和积分规则生成图片、视频、音频与 3D，并同步真实任务状态和持久化结果。",
+  "category": "Multimodal",
+  "scenarios": [
+    "通过平台生成图片或编辑图片",
+    "通过工作流画布生成视频或音频",
+    "通过平台生成并持久化 3D 资产"
+  ],
+  "promptTemplate": "使用 $platform-media 完成当前任务。按专业工作流执行并交付可验证结果。\n\n用户需求：{userInput}",
+  "preferredModel": "auto",
+  "outputType": "mixed",
+  "displayName": "平台媒体生成",
+  "shortDescription": "通过造梦后台模型、会员和积分规则生成图片、视频、音频与 3D，并同步真实任务状态和持久化结果。",
+  "skillIds": [
+    "platform_media",
+    "platform-media"
+  ],
+  "role": "造梦平台媒体生成与画布任务编排器",
+  "agentType": "platform-media-specialist",
+  "workflowProfile": "default",
+  "workflow": {
+    "mode": "direct",
+    "confirmationPolicy": "risk_based",
+    "stages": [
+      "读取轻量画布状态并按需查询模型能力",
+      "校验会员积分和素材权限",
+      "选择模型参数并配置生成节点",
+      "执行任务并轮询供应商终态",
+      "上传持久化并同步聊天画布结果"
+    ],
+    "requiredInputs": [
+      {
+        "key": "generation_request",
+        "label": "媒体目标、提示词与参考素材",
+        "required": true,
+        "blocking": true,
+        "accepts": [
+          "text",
+          "image",
+          "images",
+          "video",
+          "audio",
+          "file"
+        ]
+      }
+    ],
+    "capabilities": [
+      "reference_analysis",
+      "image_generation",
+      "video_generation",
+      "audio_generation",
+      "3d_generation",
+      "multi_asset_planning",
+      "task_status"
+    ]
+  },
+  "tools": []
+}

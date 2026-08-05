@@ -1,0 +1,1207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 49 54% 91%;
+    --foreground: 98 26% 16%;
+    --theme-foreground: 98 26% 16%;
+    --theme-muted-foreground: 92 16% 36%;
+    --theme-wash-start: 49 62% 96%;
+    --theme-wash-end: 98 28% 84%;
+    --theme-sidebar-bg-start: 49 59% 90%;
+    --theme-sidebar-bg-end: 49 45% 84%;
+    --card: 49 60% 94%;
+    --card-foreground: 98 26% 16%;
+    --popover: 49 62% 95%;
+    --popover-foreground: 98 26% 16%;
+    --primary: 92 22% 36%;
+    --primary-foreground: 49 59% 90%;
+    --secondary: 98 26% 79%;
+    --secondary-foreground: 98 26% 16%;
+    --muted: 49 38% 87%;
+    --muted-foreground: 92 16% 36%;
+    --accent: 92 23% 44%;
+    --accent-foreground: 49 59% 90%;
+    --popover-hover: 98 26% 84%;
+    --secondary-border: 92 20% 66%;
+    --constructive: 141 71% 48%;
+    --constructive-foreground: 0 0% 100%;
+    --caution: 38 92% 55%;
+    --caution-foreground: 0 0% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 92 18% 72%;
+    --input: 49 58% 94%;
+    --ring: 92 23% 44%;
+    --radius: 0.5rem;
+
+    /* Reference palette: Pine Green, Sage Mist, Hill Olive, Wheat Cream */
+    --gradient-start: 92 22% 36%;
+    --gradient-mid: 92 23% 44%;
+    --gradient-end: 98 26% 67%;
+
+    /* Sidebar text color */
+    --sidebar-text-color: #f2ebcd;
+    --sidebar-text-hover: #fff8dc;
+
+    /* Content area */
+    --content-bg: 49 54% 91%;
+    --content-area: 49 52% 90%;
+    --panel-bg: 49 60% 94%;
+
+    /* Scoped playground workspace tokens */
+    --playground-sidebar: 98 26% 16%;
+    --playground-sidebar-foreground: 49 59% 90%;
+    --playground-sidebar-muted: 49 30% 74%;
+    --playground-sidebar-active: 92 23% 28%;
+    --playground-canvas: 49 54% 91%;
+    --playground-surface: 49 40% 86%;
+    --playground-panel: 49 62% 95%;
+    --playground-menu: 49 38% 88%;
+    --playground-menu-surface: 49 44% 91%;
+    --playground-menu-hover: 98 24% 78%;
+    --playground-menu-border: 92 20% 62%;
+    --playground-tab-active: 98 26% 73%;
+    --playground-border: 92 20% 70%;
+    --playground-accent: 92 22% 36%;
+    --playground-accent-hover: 92 23% 44%;
+    --playground-accent-foreground: 49 59% 90%;
+    --sidebar-background: var(--playground-sidebar);
+    --sidebar-foreground: var(--playground-sidebar-foreground);
+    --sidebar-primary: var(--playground-sidebar-foreground);
+    --sidebar-primary-foreground: var(--playground-sidebar);
+    --sidebar-accent: var(--playground-sidebar-active);
+    --sidebar-accent-foreground: var(--playground-sidebar-foreground);
+    --sidebar-border: var(--playground-border);
+    --sidebar-ring: var(--playground-accent);
+  }
+
+  :root[data-theme="grape"] {
+    --background: 314 52% 94%;
+    --foreground: 277 24% 34%;
+    --theme-foreground: 277 24% 34%;
+    --theme-muted-foreground: 277 18% 44%;
+    --theme-wash-start: 314 58% 97%;
+    --theme-wash-end: 308 28% 87%;
+    --theme-sidebar-bg-start: 277 24% 36%;
+    --theme-sidebar-bg-end: 277 24% 28%;
+    --card: 314 56% 96%;
+    --card-foreground: 277 24% 34%;
+    --popover: 314 58% 97%;
+    --popover-foreground: 277 24% 34%;
+    --primary: 277 24% 44%;
+    --primary-foreground: 314 52% 96%;
+    --secondary: 308 26% 78%;
+    --secondary-foreground: 277 24% 34%;
+    --muted: 30 36% 88%;
+    --muted-foreground: 277 18% 44%;
+    --accent: 308 26% 62%;
+    --accent-foreground: 314 52% 96%;
+    --popover-hover: 314 40% 88%;
+    --secondary-border: 308 22% 70%;
+    --border: 308 20% 76%;
+    --input: 314 58% 96%;
+    --ring: 308 26% 62%;
+    --gradient-start: 277 24% 44%;
+    --gradient-mid: 308 26% 62%;
+    --gradient-end: 314 52% 90%;
+    --sidebar-text-color: #f3d9ed;
+    --sidebar-text-hover: #fff4fb;
+    --content-bg: 314 52% 94%;
+    --content-area: 314 42% 91%;
+    --panel-bg: 314 56% 96%;
+    --playground-sidebar: 277 24% 28%;
+    --playground-sidebar-foreground: 314 52% 93%;
+    --playground-sidebar-muted: 30 33% 82%;
+    --playground-sidebar-active: 277 24% 40%;
+    --playground-canvas: 314 42% 91%;
+    --playground-surface: 30 34% 86%;
+    --playground-panel: 314 58% 97%;
+    --playground-menu: 314 34% 90%;
+    --playground-menu-surface: 314 42% 93%;
+    --playground-menu-hover: 308 26% 78%;
+    --playground-menu-border: 308 22% 66%;
+    --playground-tab-active: 308 28% 76%;
+    --playground-border: 308 22% 74%;
+    --playground-accent: 277 24% 44%;
+    --playground-accent-hover: 308 26% 62%;
+    --playground-accent-foreground: 314 52% 96%;
+  }
+
+  :root[data-theme="ocean"] {
+    --background: 196 38% 93%;
+    --foreground: 197 39% 27%;
+    --theme-foreground: 197 39% 27%;
+    --theme-muted-foreground: 197 28% 36%;
+    --theme-wash-start: 196 42% 97%;
+    --theme-wash-end: 205 34% 85%;
+    --theme-sidebar-bg-start: 197 39% 34%;
+    --theme-sidebar-bg-end: 197 39% 24%;
+    --card: 196 40% 96%;
+    --card-foreground: 197 39% 27%;
+    --popover: 196 42% 97%;
+    --popover-foreground: 197 39% 27%;
+    --primary: 197 39% 34%;
+    --primary-foreground: 196 35% 96%;
+    --secondary: 205 31% 76%;
+    --secondary-foreground: 197 39% 27%;
+    --muted: 196 28% 88%;
+    --muted-foreground: 197 28% 36%;
+    --accent: 205 31% 58%;
+    --accent-foreground: 196 35% 96%;
+    --popover-hover: 196 28% 88%;
+    --secondary-border: 205 24% 68%;
+    --border: 205 22% 75%;
+    --input: 196 42% 96%;
+    --ring: 205 31% 58%;
+    --gradient-start: 197 39% 34%;
+    --gradient-mid: 205 31% 58%;
+    --gradient-end: 196 35% 85%;
+    --sidebar-text-color: #cde0e7;
+    --sidebar-text-hover: #f3fbff;
+    --content-bg: 196 38% 93%;
+    --content-area: 196 36% 90%;
+    --panel-bg: 196 40% 96%;
+    --playground-sidebar: 197 39% 24%;
+    --playground-sidebar-foreground: 196 35% 92%;
+    --playground-sidebar-muted: 196 28% 78%;
+    --playground-sidebar-active: 197 39% 34%;
+    --playground-canvas: 196 36% 90%;
+    --playground-surface: 196 32% 86%;
+    --playground-panel: 196 42% 97%;
+    --playground-menu: 196 31% 88%;
+    --playground-menu-surface: 196 36% 92%;
+    --playground-menu-hover: 205 31% 78%;
+    --playground-menu-border: 205 24% 66%;
+    --playground-tab-active: 205 31% 76%;
+    --playground-border: 205 24% 72%;
+    --playground-accent: 197 39% 34%;
+    --playground-accent-hover: 205 31% 58%;
+    --playground-accent-foreground: 196 35% 96%;
+  }
+
+  :root[data-theme="classicDark"] {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+    --theme-foreground: 0 0% 95%;
+    --theme-muted-foreground: 220 8% 65%;
+    --theme-wash-start: 0 0% 9%;
+    --theme-wash-end: 0 0% 5%;
+    --theme-sidebar-bg-start: 0 0% 8%;
+    --theme-sidebar-bg-end: 0 0% 5%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 220 8% 65%;
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 96%;
+    --popover-hover: 0 0% 18%;
+    --secondary-border: 0 0% 20%;
+    --border: 0 0% 18%;
+    --input: 0 0% 16%;
+    --ring: 217 91% 60%;
+    --gradient-start: 217 91% 60%;
+    --gradient-mid: 199 89% 48%;
+    --gradient-end: 186 94% 42%;
+    --sidebar-text-color: #e5e7eb;
+    --sidebar-text-hover: #ffffff;
+    --content-bg: 0 0% 7%;
+    --content-area: 0 0% 10%;
+    --panel-bg: 0 0% 13%;
+    --playground-sidebar: 0 0% 7%;
+    --playground-sidebar-foreground: 0 0% 98%;
+    --playground-sidebar-muted: 220 10% 62%;
+    --playground-sidebar-active: 0 0% 18%;
+    --playground-canvas: 0 0% 10%;
+    --playground-surface: 0 0% 13%;
+    --playground-panel: 0 0% 11%;
+    --playground-menu: 0 0% 12%;
+    --playground-menu-surface: 0 0% 15%;
+    --playground-menu-hover: 0 0% 20%;
+    --playground-menu-border: 0 0% 24%;
+    --playground-tab-active: 0 0% 21%;
+    --playground-border: 0 0% 18%;
+    --playground-accent: 72 100% 48%;
+    --playground-accent-hover: 72 100% 44%;
+    --playground-accent-foreground: 0 0% 5%;
+  }
+
+  .dark {
+    --background: 105 21% 7%;
+    --foreground: 49 59% 90%;
+    --card: 98 26% 12%;
+    --card-foreground: 49 59% 90%;
+    --popover: 98 26% 12%;
+    --popover-foreground: 49 59% 90%;
+    --primary: 98 26% 67%;
+    --primary-foreground: 105 21% 7%;
+    --secondary: 98 24% 18%;
+    --secondary-foreground: 49 59% 90%;
+    --muted: 98 18% 16%;
+    --muted-foreground: 49 29% 72%;
+    --accent: 92 23% 44%;
+    --accent-foreground: 49 59% 90%;
+    --popover-hover: 98 24% 18%;
+    --secondary-border: 98 18% 24%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 98 18% 24%;
+    --input: 98 22% 16%;
+    --ring: 98 26% 67%;
+
+    /* Reference palette in dark mode */
+    --gradient-start: 98 26% 67%;
+    --gradient-mid: 92 23% 44%;
+    --gradient-end: 92 22% 36%;
+
+    /* Sidebar text color */
+    --sidebar-text-color: #f2ebcd;
+    --sidebar-text-hover: #fff8dc;
+
+    /* Content area */
+    --content-bg: 105 21% 7%;
+    --content-area: 98 26% 10%;
+    --panel-bg: 98 26% 12%;
+    --playground-menu: 98 23% 14%;
+    --playground-menu-surface: 98 23% 16%;
+    --playground-menu-hover: 98 24% 20%;
+    --playground-menu-border: 98 18% 26%;
+  }
+}
+
+.playground-shell {
+  --background: var(--playground-canvas);
+  --foreground: var(--theme-foreground);
+  --card: var(--playground-surface);
+  --card-foreground: var(--theme-foreground);
+  --popover: var(--playground-menu);
+  --popover-foreground: var(--theme-foreground);
+  --secondary: var(--playground-surface);
+  --secondary-foreground: var(--theme-foreground);
+  --muted: var(--playground-surface);
+  --muted-foreground: var(--theme-muted-foreground);
+  --accent: var(--playground-sidebar-active);
+  --accent-foreground: var(--playground-sidebar-foreground);
+  --popover-hover: var(--playground-menu-hover);
+  --secondary-border: var(--playground-border);
+  --border: var(--playground-border);
+  --input: var(--playground-panel);
+  --ring: var(--playground-accent);
+  --content-area: var(--playground-canvas);
+  --panel-bg: var(--playground-surface);
+  --sidebar-background: var(--playground-sidebar);
+  --sidebar-foreground: var(--playground-sidebar-foreground);
+  --sidebar-primary: var(--playground-sidebar-foreground);
+  --sidebar-primary-foreground: var(--playground-sidebar);
+  --sidebar-accent: var(--playground-sidebar-active);
+  --sidebar-accent-foreground: var(--playground-sidebar-foreground);
+  --sidebar-border: var(--playground-border);
+  --sidebar-ring: var(--playground-accent);
+}
+
+.playground-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      118deg,
+      transparent 0 42%,
+      hsl(var(--playground-accent) / 0.08) 42.5% 43.5%,
+      transparent 44% 100%
+    ),
+    linear-gradient(
+      142deg,
+      transparent 0 61%,
+      hsl(var(--playground-sidebar) / 0.07) 61.5% 62.2%,
+      transparent 63% 100%
+    ),
+    linear-gradient(
+      180deg,
+      hsl(var(--playground-panel) / 0.72),
+      hsl(var(--playground-canvas) / 0.84)
+    );
+}
+
+.playground-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.opencut-editor {
+  --background: 105 21% 7%;
+  --foreground: var(--playground-sidebar-foreground);
+  --card: 98 26% 12%;
+  --card-foreground: var(--playground-sidebar-foreground);
+  --popover: 98 26% 12%;
+  --popover-hover: 98 24% 18%;
+  --popover-foreground: var(--playground-sidebar-foreground);
+  --primary: var(--playground-accent);
+  --primary-foreground: var(--playground-accent-foreground);
+  --secondary: 98 24% 16%;
+  --secondary-border: 98 18% 24%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 98 18% 14%;
+  --muted-foreground: 49 29% 72%;
+  --accent: 92 23% 28%;
+  --accent-foreground: 0 0% 96%;
+  --border: 98 18% 24%;
+  --input: 98 22% 16%;
+  --ring: var(--playground-accent);
+  --constructive: 141 71% 48%;
+  --constructive-foreground: 0 0% 100%;
+  --caution: 38 92% 55%;
+  --caution-foreground: 0 0% 10%;
+}
+
+.opencut-editor .panel {
+  --background: 98 26% 10%;
+  --foreground: var(--playground-sidebar-foreground);
+  --card: 98 26% 12%;
+  --card-foreground: var(--playground-sidebar-foreground);
+  --popover: 98 26% 12%;
+  --popover-hover: 98 24% 18%;
+  --popover-foreground: var(--playground-sidebar-foreground);
+  --secondary: 98 24% 16%;
+  --secondary-border: 98 18% 24%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 98 18% 14%;
+  --muted-foreground: 49 29% 72%;
+  --accent: 92 23% 28%;
+  --accent-foreground: 0 0% 96%;
+  --border: 98 18% 24%;
+  --input: 98 22% 16%;
+  --ring: var(--playground-accent);
+}
+
+.opencut-editor .lovarts-cut-header {
+  background: hsl(105 21% 7%);
+}
+
+.opencut-editor .lovarts-properties-panel {
+  font-size: 12px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.opencut-editor .lovarts-properties-panel [role="combobox"],
+.opencut-editor .lovarts-properties-panel input,
+.opencut-editor .lovarts-properties-panel textarea {
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+
+.opencut-editor .lovarts-properties-panel input {
+  height: auto;
+}
+
+.opencut-editor .lovarts-properties-panel [role="combobox"] {
+  min-height: 28px;
+}
+
+.opencut-editor .lovarts-properties-panel .property-title {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.opencut-editor .lovarts-properties-panel .property-feature-title {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+}
+
+.opencut-editor .lovarts-properties-panel .property-feature-hint {
+  font-size: 10px;
+  line-height: 12px;
+}
+
+.opencut-editor .lovarts-properties-panel .property-hint {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.opencut-editor .lovarts-properties-panel .property-label {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.opencut-editor .panel,
+.opencut-editor [data-panel-group] {
+  box-shadow: none;
+}
+
+.opencut-editor [data-panel-resize-handle-id] {
+  background: hsl(105 21% 7%);
+}
+
+.opencut-editor button,
+.opencut-editor [role="button"] {
+  letter-spacing: 0;
+}
+
+.opencut-editor .transition-thumb {
+  background:
+    linear-gradient(135deg, rgb(166 193 150 / 0.18), transparent 34%),
+    linear-gradient(160deg, #27351f 0%, #5a6f47 45%, #11170f 100%);
+}
+
+.opencut-editor .transition-thumb-scene {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 70% 48%, #f0d6c4 0 9%, transparent 10%),
+    linear-gradient(135deg, #c78062 0 28%, #e7c2a4 29% 43%, #7e7f80 44% 100%);
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease,
+    filter 160ms ease;
+}
+
+.opencut-editor .transition-thumb .scene-b {
+  opacity: 0.72;
+  transform: translateX(48%);
+  background:
+    radial-gradient(circle at 72% 45%, #e6ddb5 0 6%, transparent 7%),
+    linear-gradient(160deg, #a6c196 0 25%, #6d8856 26% 58%, #11170f 59% 100%);
+}
+
+.opencut-editor .transition-thumb-mark {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 46%,
+    rgb(230 221 181 / 0.85) 47% 53%,
+    transparent 54%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.65;
+}
+
+.opencut-editor .transition-thumb-slide-left .scene-a,
+.opencut-editor .transition-thumb-push-left .scene-a {
+  transform: translateX(-24%);
+}
+
+.opencut-editor .transition-thumb-slide-right .scene-b {
+  transform: translateX(-30%);
+}
+
+.opencut-editor .transition-thumb-slide-up .scene-b,
+.opencut-editor .transition-thumb-push-down .scene-b {
+  transform: translateY(36%);
+}
+
+.opencut-editor .transition-thumb-slide-down .scene-b {
+  transform: translateY(-36%);
+}
+
+.opencut-editor .transition-thumb-fade .scene-b,
+.opencut-editor .transition-thumb-fade-both .scene-b,
+.opencut-editor .transition-thumb-fade-out .scene-b {
+  opacity: 0.38;
+}
+
+.opencut-editor .transition-thumb-flash-white .transition-thumb-mark {
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.98),
+    transparent 62%
+  );
+  opacity: 0.95;
+}
+
+.opencut-editor .transition-thumb-flash-black .transition-thumb-mark {
+  background: linear-gradient(
+    90deg,
+    transparent 0 45%,
+    rgba(0, 0, 0, 0.95) 46% 70%,
+    transparent 71%
+  );
+  opacity: 0.95;
+}
+
+.opencut-editor .transition-thumb-rotate .scene-b {
+  transform: rotate(-12deg) scale(1.15);
+}
+
+.opencut-editor .transition-thumb-flip .scene-b,
+.opencut-editor .transition-thumb-page .scene-b {
+  transform: perspective(220px) rotateY(-58deg);
+  transform-origin: left center;
+}
+
+.opencut-editor .transition-thumb-blur .scene-b,
+.opencut-editor .transition-thumb-ripple .scene-b {
+  filter: blur(3px);
+  opacity: 0.65;
+}
+
+.opencut-editor .transition-thumb-pixel .transition-thumb-mark {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 42%,
+      rgb(230 221 181 / 0.7) 43% 55%,
+      transparent 56%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.2) 0 4px,
+      transparent 4px 10px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.28) 0 5px,
+      transparent 5px 11px
+    );
+}
+
+.opencut-editor .transition-thumb-wipe .transition-thumb-mark {
+  background: repeating-linear-gradient(
+    90deg,
+    rgb(230 221 181 / 0.8) 0 5px,
+    transparent 5px 12px
+  );
+}
+
+.opencut-editor .transition-thumb-zoom-in .scene-b {
+  transform: scale(0.74);
+}
+
+.opencut-editor .transition-thumb-zoom-out .scene-b {
+  transform: scale(1.24);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background:
+      linear-gradient(
+        135deg,
+        hsl(var(--theme-wash-start) / 0.86),
+        hsl(var(--theme-wash-end) / 0.22)
+      ),
+      hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family:
+      "Songti SC",
+      "Noto Serif CJK SC",
+      "Source Han Serif SC",
+      "STSong",
+      "SimSun",
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Microsoft YaHei",
+      "Noto Sans CJK SC",
+      "Noto Sans SC",
+      ui-serif,
+      Georgia,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    letter-spacing: 0;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    letter-spacing: 0;
+  }
+}
+
+/* Electron custom title bar — make top toolbar draggable */
+.electron-drag {
+  -webkit-app-region: drag;
+}
+.electron-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Reserve space for Windows title bar overlay controls (minimize/maximize/close).
+   In Electron with titleBarOverlay, the native controls sit in the top-right corner.
+   macOS uses native traffic lights on the left, so no right margin needed. */
+.is-electron:not(.is-mac) .electron-safe-right {
+  padding-right: 140px;
+}
+
+/* Hide scrollbar but keep scroll functionality (for tab bars) */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Thin scrollbar variant */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* Auto-hide scrollbar: invisible by default, visible on hover or scroll */
+.scrollbar-auto-hide::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.scrollbar-auto-hide:hover::-webkit-scrollbar-thumb,
+.scrollbar-auto-hide:active::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+}
+
+.scrollbar-auto-hide::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.45);
+}
+
+/* Gradient utilities */
+@layer utilities {
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--gradient-start)) 0%,
+      hsl(var(--gradient-mid)) 50%,
+      hsl(var(--gradient-end)) 100%
+    );
+  }
+
+  .gradient-bg {
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--gradient-start)) 0%,
+      hsl(var(--gradient-mid)) 50%,
+      hsl(var(--gradient-end)) 100%
+    );
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-start)) 0%,
+      hsl(var(--gradient-mid)) 50%,
+      hsl(var(--gradient-end)) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .glass {
+    @apply backdrop-blur-xl;
+    background: hsl(var(--background) / 0.8);
+  }
+
+  .glow {
+    box-shadow:
+      0 14px 34px hsl(var(--primary) / 0.18),
+      0 3px 12px hsl(var(--primary) / 0.12);
+  }
+
+  .glow-sm {
+    box-shadow: 0 8px 18px hsl(var(--primary) / 0.16);
+  }
+}
+
+/* Animated gradient background */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Sidebar background with depth */
+.sidebar-bg {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--theme-sidebar-bg-start)) 0%,
+    hsl(var(--theme-sidebar-bg-end)) 100%
+  );
+}
+
+.dark .sidebar-bg {
+  background: linear-gradient(180deg, hsl(98 26% 12%) 0%, hsl(105 21% 7%) 100%);
+}
+
+/* Content panel with elevation */
+.content-panel {
+  background: hsl(var(--panel-bg));
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 3px hsl(98 26% 16% / 0.08),
+    0 10px 28px hsl(92 22% 36% / 0.1);
+}
+
+.dark .content-panel {
+  box-shadow:
+    0 1px 3px hsl(0 0% 0% / 0.3),
+    0 1px 2px hsl(0 0% 0% / 0.2);
+}
+
+/* Elevated card with better shadow */
+.card-elevated {
+  box-shadow:
+    0 1px 3px hsl(98 26% 16% / 0.08),
+    0 12px 30px hsl(92 22% 36% / 0.1);
+  transition: all 0.2s ease;
+}
+
+.card-elevated:hover {
+  box-shadow:
+    0 8px 18px hsl(98 26% 16% / 0.1),
+    0 18px 34px hsl(92 22% 36% / 0.14);
+  transform: translateY(-2px);
+}
+
+.dark .card-elevated {
+  box-shadow:
+    0 1px 3px hsl(0 0% 0% / 0.4),
+    0 4px 6px hsl(0 0% 0% / 0.3);
+}
+
+.dark .card-elevated:hover {
+  box-shadow:
+    0 4px 12px hsl(0 0% 0% / 0.5),
+    0 8px 16px hsl(0 0% 0% / 0.4);
+}
+
+/* Page header with background */
+.page-header {
+  background: transparent;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+/* Abstract art animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-400px);
+  }
+}
+
+@keyframes rotate-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes particle {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translate(10px, -15px) scale(1.2);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(20px, 5px) scale(0.8);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translate(-5px, 10px) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.animate-float-slow {
+  animation: float 12s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+.animate-wave {
+  animation: wave 20s linear infinite;
+}
+
+.animate-wave-delayed {
+  animation: wave 25s linear infinite;
+  animation-delay: -5s;
+}
+
+.animate-wave-slow {
+  animation: wave 30s linear infinite;
+  animation-delay: -10s;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 60s linear infinite;
+}
+
+.animate-rotate-reverse {
+  animation: rotate-slow 45s linear infinite reverse;
+}
+
+.animate-spin-slow {
+  animation: rotate-slow 30s linear infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.animate-particle {
+  animation: particle 8s ease-in-out infinite;
+}
+
+.animate-particle-delayed {
+  animation: particle 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.animate-particle-slow {
+  animation: particle 12s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+/* Workflow node running pulse — visible glow breathe */
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(59, 130, 246, 0.5),
+      0 0 50px rgba(59, 130, 246, 0.15);
+  }
+}
+.animate-pulse-subtle {
+  animation: pulse-subtle 1.8s ease-in-out infinite;
+}
+
+/* Group drop-target breathe animation */
+@keyframes group-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.004);
+  }
+}
+.animate-group-breathe {
+  animation: group-breathe 0.8s ease-in-out infinite;
+}
+
+/* Carousel slide animations for results panel */
+@keyframes carousel-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes carousel-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Playground form field animations ── */
+
+/* Smooth grid collapse/expand */
+.grid-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.grid-collapse.open {
+  grid-template-rows: 1fr;
+}
+.grid-collapse > div {
+  overflow: hidden;
+}
+
+/* Field stagger fade-in */
+@keyframes field-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.field-animate {
+  animation: field-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Shimmer sweep on hover */
+@keyframes shimmer-sweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.08) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.btn-shimmer:hover::after {
+  opacity: 1;
+  animation: shimmer-sweep 1.2s ease-in-out;
+}
+
+/* Page enter transition — disabled for instant switching */
+
+/* Form field hover lift */
+.field-hover {
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  margin: -0.5rem;
+}
+.field-hover:hover {
+  background-color: hsl(var(--muted) / 0.3);
+  box-shadow: 0 1px 3px hsl(var(--foreground) / 0.04);
+}
+
+.playground-dark {
+  color: hsl(var(--foreground));
+}
+
+.playground-dark .field-hover {
+  border: 1px solid transparent;
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  margin: -0.25rem;
+}
+
+.playground-dark .field-hover:hover {
+  background-color: hsl(var(--playground-panel));
+  border-color: hsl(var(--playground-border));
+  box-shadow: none;
+}
+
+.playground-dark [data-radix-select-trigger],
+.playground-dark input,
+.playground-dark textarea,
+.playground-dark .rounded-lg.border.border-border\/60,
+.playground-dark .rounded-lg.border.border-border\/80,
+.playground-dark .rounded-xl.border.border-border\/80 {
+  border-color: hsl(var(--playground-border));
+}
+
+.playground-dark input,
+.playground-dark textarea {
+  background: hsl(var(--playground-panel));
+  color: hsl(var(--foreground));
+}
+
+.playground-dark textarea {
+  border-radius: 0.75rem;
+  background: hsl(var(--playground-panel)) !important;
+}
+
+.playground-dark input::placeholder,
+.playground-dark textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.playground-dark [role="dialog"],
+.playground-dark [data-radix-popper-content-wrapper] > div,
+.playground-dark [data-radix-select-content] {
+  background: hsl(var(--playground-surface));
+  border-color: hsl(var(--playground-border));
+}
+
+.playground-shell [data-radix-popper-content-wrapper],
+.playground-dark [data-radix-popper-content-wrapper] {
+  z-index: 2147483647 !important;
+}
+
+.playground-dark .playground-run-button {
+  background: hsl(var(--playground-accent));
+  color: hsl(var(--playground-accent-foreground));
+  font-weight: 700;
+}
+
+.playground-dark .playground-run-button:hover {
+  background: hsl(var(--playground-accent-hover));
+}
+
+/* Settings page staggered card entrance */
+.settings-stagger > :is(.mt-6, [class*="Card"]):nth-child(2) {
+  animation: field-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) 50ms both;
+}
+.settings-stagger > :is(.mt-6, [class*="Card"]):nth-child(3) {
+  animation: field-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) 100ms both;
+}
+.settings-stagger > :is(.mt-6, [class*="Card"]):nth-child(4) {
+  animation: field-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) 150ms both;
+}
+.settings-stagger > :is(.mt-6, [class*="Card"]):nth-child(5) {
+  animation: field-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) 200ms both;
+}
+.settings-stagger > :is(.mt-6, [class*="Card"]):nth-child(n + 6) {
+  animation: field-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) 250ms both;
+}
+
+/* ── React Flow edge reconnection handles ─────────────────────────── */
+/* reconnectRadius = 6 (matches HANDLE_SIZE / 2).
+   EdgeAnchor cx is shifted by shiftX: source(Right) → +6, target(Left) → -6.
+   But getHandlePosition returns the edge of the handle box, not its center:
+     Right → x + width  (right edge)    handle center = sourceX - 6
+     Left  → x          (left edge)     handle center = targetX + 6
+   So EdgeAnchor cx ends up 12px away from handle center in both cases.
+   We translate back to center the circle on the handle dot. */
+.react-flow__edgeupdater {
+  cursor: move;
+  pointer-events: all;
+  fill: transparent;
+  stroke: transparent;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease,
+    r 150ms ease;
+}
+.react-flow__edgeupdater-source {
+  transform: translateX(-12px);
+}
+.react-flow__edgeupdater-target {
+  transform: translateX(12px);
+}
+.react-flow__edge:hover .react-flow__edgeupdater,
+.react-flow__edge.selected .react-flow__edgeupdater {
+  r: 24;
+  fill: hsl(var(--primary) / 0.2);
+  stroke: hsl(var(--primary) / 0.5);
+  stroke-width: 1.5;
+}
+.react-flow__edgeupdater:hover {
+  r: 28;
+  fill: hsl(var(--primary) / 0.35);
+  stroke: hsl(var(--primary));
+  stroke-width: 2;
+}
