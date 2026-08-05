@@ -315,9 +315,27 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug
 
-      - name: Decode keystore
+      - name: Check Android signing configuration
         if: startsWith(github.ref, 'refs/tags/v')
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/app/release.keystore
+        id: android-signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Android signing secrets are not configured; publishing an unsigned release APK."
+          fi
+
+      - name: Decode keystore
+        if: startsWith(github.ref, 'refs/tags/v') && steps.android-signing.outputs.available == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > mobile/android/app/release.keystore
 
       - name: Build Release APK
         if: startsWith(github.ref, 'refs/tags/v')
@@ -341,25 +359,27 @@ jobs:
           # Rename debug APK
           if [ -f mobile/android/app/build/outputs/apk/debug/app-debug.apk ]; then
             mv mobile/android/app/build/outputs/apk/debug/app-debug.apk \
-               mobile/android/app/build/outputs/apk/debug/WaveSpeed-Mobile-${VERSION}-debug.apk
+               mobile/android/app/build/outputs/apk/debug/zmTV-Android-${VERSION}-debug.apk
           fi
           # Rename release APK + create a fixed-name copy for README download link
           if [ -f mobile/android/app/build/outputs/apk/release/app-release.apk ]; then
             mv mobile/android/app/build/outputs/apk/release/app-release.apk \
-               mobile/android/app/build/outputs/apk/release/WaveSpeed-Mobile-${VERSION}.apk
-            cp mobile/android/app/build/outputs/apk/release/WaveSpeed-Mobile-${VERSION}.apk \
-               mobile/android/app/build/outputs/apk/release/WaveSpeed-Mobile.apk
+               mobile/android/app/build/outputs/apk/release/zmTV-Android-${VERSION}.apk
+            cp mobile/android/app/build/outputs/apk/release/zmTV-Android-${VERSION}.apk \
+               mobile/android/app/build/outputs/apk/release/zmTV-Android.apk
           fi
           # Also handle unsigned release APK
           if [ -f mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
             mv mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk \
-               mobile/android/app/build/outputs/apk/release/WaveSpeed-Mobile-${VERSION}-unsigned.apk
+               mobile/android/app/build/outputs/apk/release/zmTV-Android-${VERSION}-unsigned.apk
+            cp mobile/android/app/build/outputs/apk/release/zmTV-Android-${VERSION}-unsigned.apk \
+               mobile/android/app/build/outputs/apk/release/zmTV-Android-unsigned.apk
           fi
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: wavespeed-mobile-debug
+          name: zmtv-mobile-debug
           path: mobile/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
@@ -367,7 +387,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
-          name: wavespeed-mobile-release
+          name: zmtv-mobile-release
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: ignore
 
@@ -388,10 +408,10 @@ jobs:
         run: find artifacts -type f -name "*.apk"
 
       - name: Upload to Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/wavespeed-mobile-release/*.apk
+            artifacts/zmtv-mobile-release/*.apk
           draft: false
           prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') }}
         env:

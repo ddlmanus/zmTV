@@ -1,13 +1,61 @@
+<p align="center">
+  <img src="docs/images/logo.png" alt="zmTV Logo" width="180" />
+</p>
+
 # 造梦影视与设计工作流
 
 **zmTV** 是一个面向 AI 影视、视觉设计和多媒体生产的桌面工作流画布。它把文本、图片、视频、音频、3D、数字人、分镜和导演 Agent 放在同一张可视化画布中，并通过动态模型参数连接不同生成服务。
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v2.1.7-7C5CFC.svg)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7)
+[![Build](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml/badge.svg)](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml)
 [![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-149ECA?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
 > 本项目源码公开，仅允许非商业使用。商业使用、SaaS 托管、收费服务、企业内生产部署或基于本项目销售产品，必须获得单独书面授权。详见 [LICENSE](LICENSE)。
+
+## 下载 v2.1.7
+
+在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7) 下载已经构建好的安装包，无需自行配置开发环境。
+
+| 平台                | 安装包                                      |
+| ------------------- | ------------------------------------------- |
+| macOS Apple Silicon | `zmTV-Desktop-mac-arm64.dmg`                |
+| macOS Intel         | `zmTV-Desktop-mac-x64.dmg`                  |
+| Windows x64         | `zmTV-Desktop-win-x64.exe`                  |
+| Linux x64           | `zmTV-Desktop-linux-x64.AppImage` 或 `.deb` |
+| Android             | `zmTV-Android-2.1.7-unsigned.apk`           |
+
+当前公开构建未进行 Apple、Microsoft 和 Android 商店签名。macOS 首次打开时需要在“隐私与安全性”中允许该应用；Android 需要允许安装来自浏览器或文件管理器的应用。源码与安装包均受非商业许可证约束。
+
+版本改动见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 功能截图
+
+### 工作流画布与动态视频节点
+
+画布支持媒体节点连接、真实素材比例、模型模式、比例、分辨率、时长、声音和美元价格等动态参数。
+
+![工作流画布与视频生成节点](docs/images/workflow-video-node.png)
+
+### 图片生成器
+
+图片模型的上传、比例、分辨率、质量和格式参数根据当前模型能力加载。
+
+![图片生成器](docs/images/image-generator.png)
+
+### 本地媒体工具
+
+内置视频增强、去水印、擦除、补帧、图片增强、上色、人脸增强等工具。
+
+![本地媒体工具](docs/images/free-tools.png)
+
+### 供应商与主题设置
+
+设置页面集中管理默认 API 服务、密钥、主题和应用偏好。
+
+![应用设置](docs/images/settings.png)
 
 ## 核心能力
 
@@ -50,7 +98,7 @@ npm run dev:web
 npm run build
 ```
 
-平台安装包可分别使用 `npm run build:mac`、`npm run build:win` 和 `npm run build:linux` 构建。
+平台安装包可分别使用 `npm run build:mac:unsigned`、`npm run build:win` 和 `npm run build:linux` 构建。
 
 ## 第一次使用
 

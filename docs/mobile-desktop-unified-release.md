@@ -62,7 +62,7 @@ push tag v1.0.48
        ├── build.yml (Desktop)
        │   ├── 构建 Windows / macOS / Linux
        │   ├── 创建 GitHub Release
-       │   └── 部署到生产服务器
+       │   └── 上传公开社区安装包
        │
        └── mobile.yml (Mobile)
            ├── 检测覆写文件冲突（警告）
@@ -75,14 +75,14 @@ push tag v1.0.48
 
 一个 GitHub Release 包含所有平台安装包：
 
-| 文件                                    | 平台                  |
-| --------------------------------------- | --------------------- |
-| WaveSpeed-Desktop-win-x64.exe           | Windows               |
-| WaveSpeed-Desktop-mac-x64.dmg           | macOS Intel           |
-| WaveSpeed-Desktop-mac-arm64.dmg         | macOS Apple Silicon   |
-| WaveSpeed-Desktop-linux-x86_64.AppImage | Linux                 |
-| WaveSpeed-Mobile-{version}.apk          | Android（带版本号）   |
-| WaveSpeed-Mobile.apk                    | Android（固定链接用） |
+| 文件                                | 平台                      |
+| ----------------------------------- | ------------------------- |
+| zmTV-Desktop-win-x64.exe            | Windows                   |
+| zmTV-Desktop-mac-x64.dmg            | macOS Intel               |
+| zmTV-Desktop-mac-arm64.dmg          | macOS Apple Silicon       |
+| zmTV-Desktop-linux-x64.AppImage     | Linux                     |
+| zmTV-Android-{version}.apk          | Android（签名构建）       |
+| zmTV-Android-{version}-unsigned.apk | Android（公开未签名构建） |
 
 ### 版本号
 
@@ -98,13 +98,13 @@ Mobile 版本号自动跟随 Desktop。CI 中自动完成：
 
 所有平台均有一键下载徽章，指向 `/releases/latest/download/`，永远是最新版本：
 
-| 平台          | 链接                                                               |
-| ------------- | ------------------------------------------------------------------ |
-| Windows       | `releases/latest/download/WaveSpeed-Desktop-win-x64.exe`           |
-| macOS Intel   | `releases/latest/download/WaveSpeed-Desktop-mac-x64.dmg`           |
-| macOS Silicon | `releases/latest/download/WaveSpeed-Desktop-mac-arm64.dmg`         |
-| Linux         | `releases/latest/download/WaveSpeed-Desktop-linux-x86_64.AppImage` |
-| Android       | `releases/latest/download/WaveSpeed-Mobile.apk`                    |
+| 平台          | 链接                                                       |
+| ------------- | ---------------------------------------------------------- |
+| Windows       | `releases/latest/download/zmTV-Desktop-win-x64.exe`        |
+| macOS Intel   | `releases/latest/download/zmTV-Desktop-mac-x64.dmg`        |
+| macOS Silicon | `releases/latest/download/zmTV-Desktop-mac-arm64.dmg`      |
+| Linux         | `releases/latest/download/zmTV-Desktop-linux-x64.AppImage` |
+| Android       | `releases/latest/download/zmTV-Android-unsigned.apk`       |
 
 ---
 

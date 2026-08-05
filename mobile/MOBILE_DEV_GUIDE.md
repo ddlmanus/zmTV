@@ -397,4 +397,4 @@ git push origin mobile-app --tags
 # 5. CI 自动构建并发布到 GitHub Releases
 ```
 
-用户下载：https://github.com/WaveSpeedAI/wavespeed-desktop/releases
+用户下载：https://github.com/ddlmanus/zmTV/releases

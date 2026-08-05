@@ -279,7 +279,7 @@ export function SettingsPage() {
     try {
       // Check GitHub releases for mobile APK
       const response = await fetch(
-        "https://api.github.com/repos/WaveSpeedAI/wavespeed-desktop/releases",
+        "https://api.github.com/repos/ddlmanus/zmTV/releases",
         { headers: { Accept: "application/vnd.github.v3+json" } },
       );
 
@@ -1473,10 +1473,7 @@ export function SettingsPage() {
           <Button
             variant="outline"
             onClick={() =>
-              window.open(
-                "https://github.com/WaveSpeedAI/wavespeed-desktop",
-                "_blank",
-              )
+              window.open("https://github.com/ddlmanus/zmTV", "_blank")
             }
           >
             <Github className="mr-2 h-4 w-4" />

@@ -1,12 +1,12 @@
 # 造梦影视与设计平台
 
-造梦影视与设计平台 is the official Android client for [WaveSpeed AI](https://wavespeed.ai), built with React + Capacitor. It shares ~70% of code with the desktop app while being deeply optimized for mobile experience.
+造梦影视与设计平台 Android 客户端基于 React 与 Capacitor 构建，并复用桌面端的模型、生成和本地工具能力。
 
-[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/WaveSpeedAI/wavespeed-desktop/releases?q=mobile&expanded=true)
+[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7)
 
 ## Version Info
 
-- **Current Version**: 0.8.2
+- **Current Version**: 2.1.7
 - **Package Name**: `ai.wavespeed.mobile`
 - **Minimum Support**: Android 5.0 (API 21)
 
@@ -129,7 +129,7 @@ Local AI tools that work without API key:
 
 ### Installation
 
-1. Download the APK file
+1. 从 [v2.1.7 Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7) 下载 `zmTV-Android-2.1.7-unsigned.apk`
 2. Open the file on your phone
 3. If prompted about "Unknown sources", allow installation
 4. Install and launch the app
@@ -322,10 +322,16 @@ Mobile shares code with desktop via Vite path aliases:
 ## Support & Feedback
 
 - **Website**: [wavespeed.ai](https://wavespeed.ai)
-- **Issue Tracker**: [GitHub Issues](https://github.com/WaveSpeedAI/wavespeed-desktop/issues)
+- **Issue Tracker**: [GitHub Issues](https://github.com/ddlmanus/zmTV/issues)
 - **API Docs**: [wavespeed.ai/docs](https://wavespeed.ai/docs)
 
 ## Changelog
+
+### v2.1.7
+
+- 使用 zmTV 无限环形 Logo
+- 与桌面端版本号统一
+- 通过 GitHub Release 提供公开非商业安装包
 
 ### v0.8.2
 
