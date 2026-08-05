@@ -136,7 +136,7 @@ Codex 操作画布时：
 
 ### 模型列表为空
 
-确认设置中的 Base URL 和 API Key 已通过连接测试，然后刷新模型目录。One API / New API 服务还需确认其兼容接口已启用。
+打开 [造梦 API 开放平台](https://api.zaomeng.art)，确认账户令牌有效且有权使用对应模型。应用的 Base URL 已固定为 `https://api.zaomeng.art`；在设置页重新保存令牌并通过验证后刷新模型目录。
 
 ### 模式出现了其他模型的选项
 

@@ -2,14 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useApiKeyStore } from "@/stores/apiKeyStore";
 import {
-  API_SERVICE_PRESETS,
+  ZAOMENG_OPEN_API_BASE_URL,
   apiClient,
-  normalizeOneApiBaseUrl,
-  type ApiServiceId,
   type BalanceTransaction,
 } from "@/api/client";
 import { useApiServiceStore } from "@/stores/apiServiceStore";
-import { useModelsStore } from "@/stores/modelsStore";
 import { useThemeStore, type Theme } from "@/stores/themeStore";
 import { useAssetsStore } from "@/stores/assetsStore";
 import { useSettingsStore } from "@/stores/settingsStore";
@@ -178,17 +175,9 @@ export function SettingsPage() {
     isValidated,
     isValidating: storeIsValidating,
     validationError,
-    loadApiKey,
   } = useApiKeyStore();
   const { theme, setTheme } = useThemeStore();
-  const {
-    serviceId,
-    baseUrl,
-    customBaseUrl,
-    loadServiceConfig,
-    setServiceConfig,
-    resolveBaseUrl,
-  } = useApiServiceStore();
+  const { baseUrl, loadServiceConfig } = useApiServiceStore();
   const {
     settings: assetsSettings,
     loadSettings: loadAssetsSettings,
@@ -203,19 +192,11 @@ export function SettingsPage() {
   const [inputKey, setInputKey] = useState(apiKey);
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [serviceDraft, setServiceDraft] = useState<ApiServiceId>(serviceId);
-  const [customBaseUrlDraft, setCustomBaseUrlDraft] = useState(customBaseUrl);
-  const [isSavingService, setIsSavingService] = useState(false);
 
   // Sync inputKey when apiKey loads from storage
   useEffect(() => {
     setInputKey(apiKey);
   }, [apiKey]);
-
-  useEffect(() => {
-    setServiceDraft(serviceId);
-    setCustomBaseUrlDraft(customBaseUrl);
-  }, [customBaseUrl, serviceId]);
 
   // Balance state
   const [balance, setBalance] = useState<number | null>(null);
@@ -849,21 +830,6 @@ export function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const normalizedDraftBaseUrl =
-        serviceDraft === "one-api"
-          ? normalizeOneApiBaseUrl(customBaseUrlDraft)
-          : resolveBaseUrl({ serviceId: serviceDraft });
-      if (
-        serviceDraft !== serviceId ||
-        (serviceDraft === "one-api" && normalizedDraftBaseUrl !== baseUrl)
-      ) {
-        toast({
-          title: "请先保存默认服务",
-          description: "切换供应商后，再保存该供应商对应的 API Key。",
-          variant: "destructive",
-        });
-        return;
-      }
       const isValid = await setApiKey(inputKey);
       if (isValid) {
         toast({
@@ -896,34 +862,6 @@ export function SettingsPage() {
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleSaveService = async () => {
-    setIsSavingService(true);
-    try {
-      await setServiceConfig({
-        serviceId: serviceDraft,
-        customBaseUrl: customBaseUrlDraft,
-      });
-      await loadApiKey(true);
-      await useModelsStore.getState().fetchModels(true);
-      toast({
-        title: "默认服务已保存",
-        description: `当前桌面端 API 服务：${resolveBaseUrl({
-          serviceId: serviceDraft,
-          customBaseUrl: customBaseUrlDraft,
-        })}`,
-      });
-    } catch (error) {
-      toast({
-        title: t("common.error"),
-        description:
-          error instanceof Error ? error.message : "默认服务保存失败",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSavingService(false);
     }
   };
 
@@ -1175,91 +1113,31 @@ export function SettingsPage() {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle>默认服务</CardTitle>
+              <CardTitle>API 服务</CardTitle>
               <CardDescription>
-                设置整个桌面端默认调用的 API
-                服务。模型、生成、上传、余额都会使用这里的地址。
+                模型、生成、上传、任务轮询、余额和历史记录统一使用造梦 API
+                开放平台。
               </CardDescription>
             </div>
             <Badge variant="secondary" className="shrink-0">
-              {baseUrl}
+              固定平台
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="apiService">默认配置</Label>
-            <Select
-              value={serviceDraft}
-              onValueChange={(value) => setServiceDraft(value as ApiServiceId)}
+          <div className="grid gap-3 sm:grid-cols-[140px_1fr] sm:items-center">
+            <Label>平台</Label>
+            <div className="font-medium">造梦 API 开放平台</div>
+            <Label>Base URL</Label>
+            <a
+              href={ZAOMENG_OPEN_API_BASE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-w-0 items-center gap-2 font-mono text-sm text-primary hover:underline"
             >
-              <SelectTrigger id="apiService">
-                <SelectValue placeholder="选择默认服务" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ideart-production">
-                  zaomeng.art (
-                  {API_SERVICE_PRESETS["ideart-production"].baseUrl})
-                </SelectItem>
-                <SelectItem value="wavespeed">
-                  WaveSpeed 官方 ({API_SERVICE_PRESETS.wavespeed.baseUrl})
-                </SelectItem>
-                <SelectItem value="zaomeng-api">
-                  造梦 API 开放平台 (
-                  {API_SERVICE_PRESETS["zaomeng-api"].baseUrl})
-                </SelectItem>
-                <SelectItem value="one-api">One API / New API</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {serviceDraft === "one-api" ? (
-            <div className="space-y-2">
-              <Label htmlFor="oneApiBaseUrl">Base URL</Label>
-              <Input
-                id="oneApiBaseUrl"
-                type="url"
-                value={customBaseUrlDraft}
-                onChange={(event) => setCustomBaseUrlDraft(event.target.value)}
-                placeholder="https://one-api.example.com"
-                spellCheck={false}
-                autoCapitalize="none"
-                autoCorrect="off"
-                className="font-mono"
-              />
-              <p className="text-xs text-muted-foreground">
-                可填写服务根地址或以 /v1 结尾的地址，保存时会自动规范化。
-              </p>
-            </div>
-          ) : null}
-
-          <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-muted-foreground">
-            保存后将使用：
-            <span className="ml-1 font-mono text-foreground">
-              {resolveBaseUrl({
-                serviceId: serviceDraft,
-                customBaseUrl: customBaseUrlDraft,
-              })}
-            </span>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleSaveService}
-              disabled={
-                isSavingService ||
-                (serviceDraft === "one-api" && !customBaseUrlDraft.trim())
-              }
-            >
-              {isSavingService ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  保存中
-                </>
-              ) : (
-                "保存默认服务"
-              )}
-            </Button>
+              <Globe className="h-4 w-4 shrink-0" />
+              <span className="truncate">{baseUrl}</span>
+            </a>
           </div>
         </CardContent>
       </Card>
@@ -1270,9 +1148,7 @@ export function SettingsPage() {
             <div>
               <CardTitle>{t("settings.apiKey.title")}</CardTitle>
               <CardDescription>
-                {t("settings.apiKey.description", {
-                  provider: API_SERVICE_PRESETS[serviceId].name,
-                })}
+                输入造梦 API 开放平台令牌，用于验证账户并加载模型。
               </CardDescription>
             </div>
             {apiKey && storeIsValidating && (
@@ -1319,16 +1195,12 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               {t("settings.apiKey.getKey")}{" "}
               <a
-                href={
-                  serviceId === "one-api"
-                    ? baseUrl
-                    : API_SERVICE_PRESETS[serviceId].baseUrl
-                }
+                href={ZAOMENG_OPEN_API_BASE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                {API_SERVICE_PRESETS[serviceId].name}
+                造梦 API 开放平台
               </a>
             </p>
             {validationError && !storeIsValidating && !isValidated ? (

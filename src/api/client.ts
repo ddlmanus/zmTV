@@ -25,7 +25,7 @@ export const IDEART_API_BASE_URL_STORAGE_KEY = "ideart_gateway_base_url";
 export const IDEART_PRODUCTION_API_BASE_URL = "https://zaomeng.art";
 export const OFFICIAL_WAVESPEED_API_BASE_URL = "https://api.wavespeed.ai";
 export const ZAOMENG_OPEN_API_BASE_URL = "https://api.zaomeng.art";
-export const DEFAULT_API_BASE_URL = IDEART_PRODUCTION_API_BASE_URL;
+export const DEFAULT_API_BASE_URL = ZAOMENG_OPEN_API_BASE_URL;
 export type ApiServiceId =
   | "wavespeed"
   | "ideart-production"

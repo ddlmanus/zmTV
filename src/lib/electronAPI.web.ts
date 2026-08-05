@@ -48,53 +48,41 @@ const DEFAULT_SETTINGS = {
   updateChannel: "stable" as const,
   autoCheckUpdate: false,
   language: "auto",
-  apiServiceId: "ideart-production" as ApiServiceId,
-  apiBaseUrl: "https://zaomeng.art",
+  apiServiceId: "zaomeng-api" as ApiServiceId,
+  apiBaseUrl: "https://api.zaomeng.art",
   customApiBaseUrl: "",
 };
 
-function activeCredentialScope(settings: {
-  apiServiceId?: ApiServiceId;
-  apiBaseUrl?: string;
-}) {
-  return settings.apiServiceId === "one-api" && settings.apiBaseUrl
-    ? `one-api:${settings.apiBaseUrl}`
-    : settings.apiServiceId || DEFAULT_SETTINGS.apiServiceId;
+function normalizeApiSettings(
+  settings: Record<string, unknown>,
+): typeof DEFAULT_SETTINGS {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    apiServiceId: DEFAULT_SETTINGS.apiServiceId,
+    apiBaseUrl: DEFAULT_SETTINGS.apiBaseUrl,
+    customApiBaseUrl: "",
+  };
+}
+
+function activeCredentialScope() {
+  return DEFAULT_SETTINGS.apiServiceId;
 }
 
 // Web implementation of electronAPI.
 export const electronAPIWeb: ElectronAPI = {
   // API key management
   getApiKey: async (credentialScope?: string): Promise<string> => {
-    const settings = await electronAPIWeb.getSettings();
-    const targetScope = credentialScope || activeCredentialScope(settings);
+    void credentialScope;
+    const targetScope = activeCredentialScope();
     try {
       const raw = localStorage.getItem(API_KEYS_STORAGE_KEY);
       const keys = raw ? (JSON.parse(raw) as Record<string, string>) : {};
       if (targetScope && keys[targetScope] !== undefined) {
         return keys[targetScope] || "";
       }
-      if (targetScope?.startsWith("one-api:")) {
-        const legacyOneApiKey = keys["one-api"] || keys.custom;
-        if (legacyOneApiKey) {
-          keys[targetScope] = legacyOneApiKey;
-          localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(keys));
-          return legacyOneApiKey;
-        }
-      }
-      const legacyKey = localStorage.getItem(API_KEY_STORAGE_KEY) || "";
-      if (
-        legacyKey &&
-        targetScope &&
-        Object.keys(keys).length === 0 &&
-        targetScope === activeCredentialScope(settings)
-      ) {
-        keys[targetScope] = legacyKey;
-        localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(keys));
-        return legacyKey;
-      }
     } catch {
-      // Fall through to the legacy single-key value.
+      // Ignore malformed browser storage.
     }
     return "";
   },
@@ -104,13 +92,13 @@ export const electronAPIWeb: ElectronAPI = {
     credentialScope?: string,
   ): Promise<boolean> => {
     try {
-      const settings = await electronAPIWeb.getSettings();
-      const targetScope = credentialScope || activeCredentialScope(settings);
+      void credentialScope;
+      const targetScope = activeCredentialScope();
       const raw = localStorage.getItem(API_KEYS_STORAGE_KEY);
       const keys = raw ? (JSON.parse(raw) as Record<string, string>) : {};
       if (targetScope) keys[targetScope] = apiKey;
       localStorage.setItem(API_KEYS_STORAGE_KEY, JSON.stringify(keys));
-      if (targetScope === activeCredentialScope(settings)) {
+      if (targetScope === activeCredentialScope()) {
         localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
       }
       return true;
@@ -130,7 +118,12 @@ export const electronAPIWeb: ElectronAPI = {
     try {
       const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (stored) {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+        const normalized = normalizeApiSettings({
+          ...DEFAULT_SETTINGS,
+          ...JSON.parse(stored),
+        });
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
       }
     } catch {
       // ignore
@@ -143,7 +136,7 @@ export const electronAPIWeb: ElectronAPI = {
       const current = await electronAPIWeb.getSettings();
       localStorage.setItem(
         SETTINGS_STORAGE_KEY,
-        JSON.stringify({ ...current, ...settings }),
+        JSON.stringify(normalizeApiSettings({ ...current, ...settings })),
       );
       return true;
     } catch {

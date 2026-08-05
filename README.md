@@ -4,10 +4,10 @@
 
 # 造梦影视与设计工作流
 
-**zmTV** 是一个面向 AI 影视、视觉设计和多媒体生产的桌面工作流画布。它把文本、图片、视频、音频、3D、数字人、分镜和导演 Agent 放在同一张可视化画布中，并通过动态模型参数连接不同生成服务。
+**zmTV** 是一个面向 AI 影视、视觉设计和多媒体生产的桌面工作流画布。它把文本、图片、视频、音频、3D、数字人、分镜和导演 Agent 放在同一张可视化画布中，并通过 [造梦 API 开放平台](https://api.zaomeng.art) 动态加载模型和参数。
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.1.8-7C5CFC.svg)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8)
+[![Version](https://img.shields.io/badge/version-v2.1.9-7C5CFC.svg)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.9)
 [![Build](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml/badge.svg)](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml)
 [![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-149ECA?logo=react)](https://react.dev/)
@@ -15,9 +15,9 @@
 
 > 本项目源码公开，仅允许非商业使用。商业使用、SaaS 托管、收费服务、企业内生产部署或基于本项目销售产品，必须获得单独书面授权。详见 [LICENSE](LICENSE)。
 
-## 下载 v2.1.8
+## 下载 v2.1.9
 
-在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8) 下载已经构建好的安装包，无需自行配置开发环境。
+在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.9) 下载已经构建好的安装包，无需自行配置开发环境。
 
 | 平台                | 安装包                                                                                                                                                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -25,13 +25,13 @@
 | macOS Intel         | [下载 DMG](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-mac-x64.dmg)                                                                                                                     |
 | Windows x64         | [下载安装程序](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-win-x64.exe)                                                                                                                 |
 | Linux x64           | [下载 AppImage](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-x86_64.AppImage) / [下载 deb](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-amd64.deb) |
-| Android             | [下载 APK](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Android-2.1.8-unsigned.apk)                                                                                                              |
+| Android             | [下载 APK](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Android-2.1.9-unsigned.apk)                                                                                                              |
 
 当前公开构建未进行 Apple、Microsoft 和 Android 商店签名。macOS 首次打开时需要在“隐私与安全性”中允许该应用；Android 需要允许安装来自浏览器或文件管理器的应用。源码与安装包均受非商业许可证约束。
 
 ### macOS 提示“已损坏，无法打开”
 
-这通常是因为当前社区版没有 Apple Developer ID 签名和公证，被 macOS Gatekeeper 拦截，并不等于 DMG 文件真的损坏。请确认安装包来自本项目的 [GitHub Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8)，将应用拖入“应用程序”后执行：
+这通常是因为当前社区版没有 Apple Developer ID 签名和公证，被 macOS Gatekeeper 拦截，并不等于 DMG 文件真的损坏。请确认安装包来自本项目的 [GitHub Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.9)，将应用拖入“应用程序”后执行：
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/造梦影视与设计工作流.app"
@@ -62,9 +62,9 @@ open "/Applications/造梦影视与设计工作流.app"
 
 ![本地媒体工具](docs/images/free-tools.png)
 
-### 供应商与主题设置
+### API 平台与主题设置
 
-设置页面集中管理默认 API 服务、密钥、主题和应用偏好。
+设置页面集中管理造梦 API 开放平台令牌、主题和应用偏好。
 
 ![应用设置](docs/images/settings.png)
 
@@ -77,7 +77,7 @@ open "/Applications/造梦影视与设计工作流.app"
 - 图片与视频工具栏：重绘、扩图、裁剪、改尺寸、多角度、打光、视频编辑等画布内工具。
 - Codex 画布助手：读取画布上下文、引用已有素材、创建或调整节点，并跟踪生成任务。
 - 导演工作台：脚本、镜头、角色、场景、时间线和 3D 导演控制台。
-- 多供应商接入：支持平台 API、WaveSpeed 以及 One API / New API 兼容服务。
+- 统一平台接入：模型、生成、上传、任务轮询、余额和历史统一通过造梦 API 开放平台处理。
 - 桌面与浏览器开发模式：Electron 桌面运行，也可用 Vite 启动浏览器调试。
 
 ## 快速开始
@@ -111,9 +111,21 @@ npm run build
 
 平台安装包可分别使用 `npm run build:mac:unsigned`、`npm run build:win` 和 `npm run build:linux` 构建。
 
+## 配置造梦 API 开放平台
+
+zmTV 已将服务地址固定为 [`https://api.zaomeng.art`](https://api.zaomeng.art)，不需要选择供应商，也不需要填写 Base URL。首次使用时只需配置平台令牌：
+
+1. 打开 [造梦 API 开放平台](https://api.zaomeng.art)，注册或登录账户。
+2. 进入平台控制台的“令牌管理”，创建一个令牌并复制。平台中的“令牌”就是 zmTV 设置页需要的 API Key。
+3. 打开 zmTV 的“设置”页面，确认页面显示的固定 Base URL 为 `https://api.zaomeng.art`。
+4. 将令牌粘贴到“API 密钥”输入框并保存。
+5. 等待凭据验证完成。验证成功后，应用会加载该账户可用的模型、余额和生成能力。
+
+请勿把令牌写入源码、截图、Issue 或公开日志。模型调用、素材上传、图片/视频/音频/3D/数字人生成、异步任务轮询、余额和生成历史均使用该平台账户。
+
 ## 第一次使用
 
-1. 打开“设置”，选择生成服务并填写 Base URL 与 API Key。
+1. 按上一节说明在“设置”中填写造梦 API 开放平台令牌。
 2. 完成连接验证并等待模型目录加载。
 3. 打开左侧“画布”，新建或选择一个画布。
 4. 从节点菜单添加文本、图片、视频、音频、3D 或数字人节点。
@@ -121,7 +133,7 @@ npm run build
 6. 将上游节点输出端口连接到下游节点输入端口，填写提示词后运行节点或工作流。
 7. 生成结果会回填到节点；桌面端会保存画布、任务状态和生成记录。
 
-完整操作见 [工作流画布使用手册](docs/workflow-canvas-guide.md)。供应商开发见 [模型与供应商接入](docs/provider-integration.md)。
+完整操作见 [工作流画布使用手册](docs/workflow-canvas-guide.md)。平台调用约定见 [造梦 API 平台接入](docs/provider-integration.md)。
 
 ## 项目结构
 

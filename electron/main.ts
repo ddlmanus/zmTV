@@ -494,22 +494,13 @@ const defaultAssetsDirectory = join(
   "造梦影视与设计平台",
 );
 const assetsMetadataPath = join(userDataPath, "assets-metadata.json");
-const IDEART_PRODUCTION_API_BASE_URL = "https://zaomeng.art";
 const ZAOMENG_OPEN_API_BASE_URL = "https://api.zaomeng.art";
-const API_SERVICE_BASE_URLS: Record<
-  Exclude<ApiServiceId, "one-api">,
-  string
-> = {
-  wavespeed: "https://api.wavespeed.ai",
-  "ideart-production": IDEART_PRODUCTION_API_BASE_URL,
-  "zaomeng-api": ZAOMENG_OPEN_API_BASE_URL,
-};
 
 const defaultSettings: Settings = {
   apiKey: "",
   apiKeys: {},
-  apiServiceId: "ideart-production",
-  apiBaseUrl: IDEART_PRODUCTION_API_BASE_URL,
+  apiServiceId: "zaomeng-api",
+  apiBaseUrl: ZAOMENG_OPEN_API_BASE_URL,
   customApiBaseUrl: "",
   theme: "system",
   defaultPollInterval: 1000,
@@ -521,78 +512,21 @@ const defaultSettings: Settings = {
   language: "auto",
 };
 
-function normalizeApiBaseUrl(value?: string | null): string {
-  return String(value || "")
-    .trim()
-    .replace(/\/+$/, "");
-}
-
-function normalizeOneApiBaseUrl(value?: string | null): string {
-  const normalized = normalizeApiBaseUrl(value);
-  if (!normalized) return "";
-  try {
-    const url = new URL(normalized);
-    if (!["http:", "https:"].includes(url.protocol)) return "";
-    url.search = "";
-    url.hash = "";
-    url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/v1$/i, "");
-    return normalizeApiBaseUrl(url.toString());
-  } catch {
-    return "";
-  }
-}
-
 function normalizeAssetsDirectory(value?: string | null): string {
   const directory = String(value || "").trim();
   return directory || defaultAssetsDirectory;
 }
 
-function isApiServiceId(value: unknown): value is ApiServiceId {
-  return ["wavespeed", "ideart-production", "zaomeng-api", "one-api"].includes(
-    String(value || ""),
-  );
-}
-
-function resolveApiBaseUrl(serviceId: ApiServiceId, customBaseUrl: string) {
-  if (serviceId === "one-api") return normalizeOneApiBaseUrl(customBaseUrl);
-  return API_SERVICE_BASE_URLS[serviceId];
-}
-
-function apiCredentialScope(serviceId: ApiServiceId, baseUrl: string) {
-  return serviceId === "one-api" && baseUrl ? `one-api:${baseUrl}` : serviceId;
-}
-
 function normalizeSettings(settings: Settings): Settings {
-  const requestedServiceId =
-    String(settings.apiServiceId || "") === "custom"
-      ? "one-api"
-      : settings.apiServiceId;
-  let apiServiceId = isApiServiceId(requestedServiceId)
-    ? requestedServiceId
-    : defaultSettings.apiServiceId;
   const apiKeys = { ...(settings.apiKeys || {}) };
-  let customApiBaseUrl = normalizeOneApiBaseUrl(settings.customApiBaseUrl);
-  if (apiServiceId === "one-api" && !customApiBaseUrl) {
-    apiServiceId = defaultSettings.apiServiceId;
-    customApiBaseUrl = "";
-  }
-  const apiBaseUrl = resolveApiBaseUrl(apiServiceId, customApiBaseUrl);
-  const credentialScope = apiCredentialScope(apiServiceId, apiBaseUrl);
-  if (
-    apiServiceId === "one-api" &&
-    apiKeys["one-api"] &&
-    !apiKeys[credentialScope]
-  ) {
-    apiKeys[credentialScope] = apiKeys["one-api"];
-  }
   const assetsDirectory = normalizeAssetsDirectory(settings.assetsDirectory);
   return {
     ...settings,
-    apiKey: apiKeys[credentialScope] || "",
+    apiKey: apiKeys["zaomeng-api"] || "",
     apiKeys,
-    apiServiceId,
-    apiBaseUrl,
-    customApiBaseUrl,
+    apiServiceId: "zaomeng-api",
+    apiBaseUrl: ZAOMENG_OPEN_API_BASE_URL,
+    customApiBaseUrl: "",
     assetsDirectory,
   };
 }
@@ -630,14 +564,7 @@ function saveSettings(settings: Partial<Settings>): void {
       ...(settings.apiKeys || {}),
     };
     if (settings.apiKey !== undefined) {
-      const serviceId = isApiServiceId(settings.apiServiceId)
-        ? settings.apiServiceId
-        : currentSettings.apiServiceId;
-      const baseUrl = resolveApiBaseUrl(
-        serviceId,
-        String(settings.customApiBaseUrl ?? currentSettings.customApiBaseUrl),
-      );
-      apiKeys[apiCredentialScope(serviceId, baseUrl)] = settings.apiKey;
+      apiKeys["zaomeng-api"] = settings.apiKey;
     }
     const newSettings = normalizeSettings({
       ...currentSettings,
@@ -851,21 +778,15 @@ ipcMain.handle("update-titlebar-theme", (_, isDark: boolean) => {
 });
 
 function resolveCredentialScope(value: unknown, settings: Settings): string {
-  const requested = String(value || "").trim();
-  if (requested) return requested;
-  return apiCredentialScope(settings.apiServiceId, settings.apiBaseUrl);
+  void value;
+  void settings;
+  return "zaomeng-api";
 }
 
 ipcMain.handle("get-api-key", (_, credentialScope?: string) => {
   const settings = loadSettings();
   const targetScope = resolveCredentialScope(credentialScope, settings);
-  return (
-    settings.apiKeys[targetScope] ||
-    (targetScope.startsWith("one-api:")
-      ? settings.apiKeys["one-api"] || settings.apiKeys.custom
-      : "") ||
-    ""
-  );
+  return settings.apiKeys[targetScope] || "";
 });
 
 ipcMain.handle("set-api-key", (_, apiKey: string, credentialScope?: string) => {
@@ -2467,13 +2388,9 @@ function workflowCodexProviderConfig(): WorkflowBackendProviderConfig {
   const settings = loadSettings();
   const currentKey = String(settings.apiKey || "").trim();
   const zaomengKey = String(settings.apiKeys["zaomeng-api"] || "").trim();
-  const isOneApi = settings.apiServiceId === "one-api";
-  const baseUrl = isOneApi
-    ? settings.apiBaseUrl.replace(/\/+$/, "") + "/v1"
-    : ZAOMENG_OPEN_API_BASE_URL + "/v1";
   return {
-    baseUrl,
-    apiKey: isOneApi ? currentKey : zaomengKey || currentKey,
+    baseUrl: ZAOMENG_OPEN_API_BASE_URL + "/v1",
+    apiKey: zaomengKey || currentKey,
     model: "openai/gpt-5.6-sol",
   };
 }

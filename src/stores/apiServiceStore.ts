@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import {
-  API_SERVICE_PRESETS,
-  DEFAULT_API_BASE_URL,
+  ZAOMENG_OPEN_API_BASE_URL,
   apiClient,
-  normalizeOneApiBaseUrl,
   type ApiServiceId,
 } from "@/api/client";
 import { useModelsStore } from "@/stores/modelsStore";
@@ -25,7 +23,7 @@ interface ApiServiceState extends ApiServiceConfig {
 }
 
 const DEFAULT_SERVICE_CONFIG: ApiServiceConfig = {
-  serviceId: "ideart-production",
+  serviceId: "zaomeng-api",
   customBaseUrl: "",
 };
 
@@ -35,46 +33,14 @@ function normalizeBaseUrl(value?: string | null): string {
     .replace(/\/+$/, "");
 }
 
-function resolveBaseUrlFromConfig(config: Partial<ApiServiceConfig>): string {
-  const serviceId = config.serviceId || DEFAULT_SERVICE_CONFIG.serviceId;
-  if (serviceId === "one-api") {
-    try {
-      return (
-        normalizeOneApiBaseUrl(config.customBaseUrl) || DEFAULT_API_BASE_URL
-      );
-    } catch {
-      return normalizeBaseUrl(config.customBaseUrl) || DEFAULT_API_BASE_URL;
-    }
-  }
-  return API_SERVICE_PRESETS[serviceId]?.baseUrl || DEFAULT_API_BASE_URL;
+function resolveBaseUrlFromConfig(_config: Partial<ApiServiceConfig>): string {
+  return ZAOMENG_OPEN_API_BASE_URL;
 }
 
 function normalizeStoredConfig(
-  config: Partial<ApiServiceConfig>,
+  _config: Partial<ApiServiceConfig>,
 ): ApiServiceConfig {
-  const rawServiceId = String(
-    config.serviceId || DEFAULT_SERVICE_CONFIG.serviceId,
-  );
-  const serviceId = (
-    rawServiceId === "custom" ? "one-api" : rawServiceId
-  ) as ApiServiceId;
-  let customBaseUrl = normalizeBaseUrl(config.customBaseUrl);
-  if (serviceId === "one-api") {
-    try {
-      customBaseUrl = normalizeOneApiBaseUrl(customBaseUrl);
-    } catch {
-      return DEFAULT_SERVICE_CONFIG;
-    }
-    if (!customBaseUrl) return DEFAULT_SERVICE_CONFIG;
-  }
-
-  return {
-    serviceId:
-      serviceId in API_SERVICE_PRESETS
-        ? serviceId
-        : DEFAULT_SERVICE_CONFIG.serviceId,
-    customBaseUrl,
-  };
+  return { ...DEFAULT_SERVICE_CONFIG };
 }
 
 async function loadStoredConfig(): Promise<ApiServiceConfig> {
@@ -92,6 +58,7 @@ async function loadStoredConfig(): Promise<ApiServiceConfig> {
     ) {
       await saveStoredConfig(config);
     }
+    localStorage.setItem(SERVICE_STORAGE_KEY, JSON.stringify(config));
     return config;
   }
 
@@ -128,7 +95,7 @@ async function saveStoredConfig(config: ApiServiceConfig): Promise<void> {
 
 export const useApiServiceStore = create<ApiServiceState>((set, get) => ({
   ...DEFAULT_SERVICE_CONFIG,
-  baseUrl: DEFAULT_API_BASE_URL,
+  baseUrl: ZAOMENG_OPEN_API_BASE_URL,
   isLoading: false,
   hasLoaded: false,
 
@@ -156,20 +123,8 @@ export const useApiServiceStore = create<ApiServiceState>((set, get) => ({
     }
   },
 
-  setServiceConfig: async (config) => {
-    const next: ApiServiceConfig = {
-      serviceId: config.serviceId || get().serviceId,
-      customBaseUrl:
-        config.customBaseUrl === undefined
-          ? get().customBaseUrl
-          : normalizeBaseUrl(config.customBaseUrl),
-    };
-    if (next.serviceId === "one-api") {
-      next.customBaseUrl = normalizeOneApiBaseUrl(next.customBaseUrl);
-      if (!next.customBaseUrl) {
-        throw new Error("请输入 One API Base URL");
-      }
-    }
+  setServiceConfig: async (_config) => {
+    const next = { ...DEFAULT_SERVICE_CONFIG };
     const baseUrl = resolveBaseUrlFromConfig(next);
     apiClient.setBaseUrl(baseUrl);
     useModelsStore.getState().loadCachedModelsForCurrentService();
