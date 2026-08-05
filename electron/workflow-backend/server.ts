@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { ServerType } from "@hono/node-server";
@@ -14,6 +13,7 @@ import { registerProjectRoutes } from "./routes/projects";
 import { registerProviderAssetRoutes } from "./routes/provider-assets";
 import { registerSkillLibraryRoutes } from "./routes/skill-library";
 import { WorkflowJsonStore } from "./storage";
+import { resolveCodexBinary } from "./codex-binary";
 
 export type WorkflowBackendProviderConfig = {
   baseUrl: string;
@@ -47,42 +47,6 @@ let localBaseUrl = "";
 let localToken = "";
 let providerConfig: WorkflowBackendOptions["getProviderConfig"] | null = null;
 let workflowApp: Hono | null = null;
-
-function resolveCodexBinary(appRoot: string) {
-  const explicit = String(process.env.CODEX_BIN || "").trim();
-  if (explicit) return explicit;
-
-  const require = createRequire(import.meta.url);
-  const target =
-    process.platform === "darwin"
-      ? process.arch === "arm64"
-        ? ["@openai/codex-darwin-arm64", "aarch64-apple-darwin"]
-        : ["@openai/codex-darwin-x64", "x86_64-apple-darwin"]
-      : process.platform === "win32"
-        ? process.arch === "arm64"
-          ? ["@openai/codex-win32-arm64", "aarch64-pc-windows-msvc"]
-          : ["@openai/codex-win32-x64", "x86_64-pc-windows-msvc"]
-        : process.arch === "arm64"
-          ? ["@openai/codex-linux-arm64", "aarch64-unknown-linux-musl"]
-          : ["@openai/codex-linux-x64", "x86_64-unknown-linux-musl"];
-  try {
-    const packageJson = require.resolve(target[0] + "/package.json");
-    return path.join(
-      path.dirname(packageJson),
-      "vendor",
-      target[1],
-      "bin",
-      process.platform === "win32" ? "codex.exe" : "codex",
-    );
-  } catch {
-    return path.join(
-      appRoot,
-      "node_modules",
-      ".bin",
-      process.platform === "win32" ? "codex.cmd" : "codex",
-    );
-  }
-}
 
 function configureEnvironment(options: WorkflowBackendOptions) {
   const skillsRoot = path.join(options.resourcesRoot, "workflow-skills");

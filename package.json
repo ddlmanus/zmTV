@@ -1,6 +1,6 @@
 {
   "name": "zmtv",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "造梦影视与设计工作流 - AI 影视、设计与多媒体生成画布",
   "main": "./out/main/index.js",
   "author": "ddlmanus",

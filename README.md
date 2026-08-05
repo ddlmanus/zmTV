@@ -7,7 +7,7 @@
 **zmTV** 是一个面向 AI 影视、视觉设计和多媒体生产的桌面工作流画布。它把文本、图片、视频、音频、3D、数字人、分镜和导演 Agent 放在同一张可视化画布中，并通过动态模型参数连接不同生成服务。
 
 [![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-v2.1.7-7C5CFC.svg)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7)
+[![Version](https://img.shields.io/badge/version-v2.1.8-7C5CFC.svg)](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8)
 [![Build](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml/badge.svg)](https://github.com/ddlmanus/zmTV/actions/workflows/build.yml)
 [![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18-149ECA?logo=react)](https://react.dev/)
@@ -15,9 +15,9 @@
 
 > 本项目源码公开，仅允许非商业使用。商业使用、SaaS 托管、收费服务、企业内生产部署或基于本项目销售产品，必须获得单独书面授权。详见 [LICENSE](LICENSE)。
 
-## 下载 v2.1.7
+## 下载 v2.1.8
 
-在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7) 下载已经构建好的安装包，无需自行配置开发环境。
+在 [GitHub Releases](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8) 下载已经构建好的安装包，无需自行配置开发环境。
 
 | 平台                | 安装包                                                                                                                                                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -25,13 +25,13 @@
 | macOS Intel         | [下载 DMG](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-mac-x64.dmg)                                                                                                                     |
 | Windows x64         | [下载安装程序](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-win-x64.exe)                                                                                                                 |
 | Linux x64           | [下载 AppImage](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-x86_64.AppImage) / [下载 deb](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Desktop-linux-amd64.deb) |
-| Android             | [下载 APK](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Android-2.1.7-unsigned.apk)                                                                                                              |
+| Android             | [下载 APK](https://github.com/ddlmanus/zmTV/releases/latest/download/zmTV-Android-2.1.8-unsigned.apk)                                                                                                              |
 
 当前公开构建未进行 Apple、Microsoft 和 Android 商店签名。macOS 首次打开时需要在“隐私与安全性”中允许该应用；Android 需要允许安装来自浏览器或文件管理器的应用。源码与安装包均受非商业许可证约束。
 
 ### macOS 提示“已损坏，无法打开”
 
-这通常是因为当前社区版没有 Apple Developer ID 签名和公证，被 macOS Gatekeeper 拦截，并不等于 DMG 文件真的损坏。请确认安装包来自本项目的 [GitHub Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.7)，将应用拖入“应用程序”后执行：
+这通常是因为当前社区版没有 Apple Developer ID 签名和公证，被 macOS Gatekeeper 拦截，并不等于 DMG 文件真的损坏。请确认安装包来自本项目的 [GitHub Release](https://github.com/ddlmanus/zmTV/releases/tag/v2.1.8)，将应用拖入“应用程序”后执行：
 
 ```bash
 xattr -dr com.apple.quarantine "/Applications/造梦影视与设计工作流.app"

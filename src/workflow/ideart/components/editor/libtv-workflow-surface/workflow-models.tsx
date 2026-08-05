@@ -3,6 +3,7 @@
 import React from "react";
 import type { LibTvWorkflowNode } from "@/workflow/ideart/lib/libtv/workflow";
 import { preloadModels } from "@/workflow/ideart/lib/hooks/useModels";
+import { workflowFetch } from "@/workflow/backend/client";
 import {
   estimateFixedGenerationPoints,
   isFreeBillingModel,
@@ -243,16 +244,20 @@ export function getWorkflowAudioEndpointRuntimeId(
   model: WorkflowModelOption | null | undefined,
   mode: unknown,
 ) {
-  const choices =
-    model?.parameters?.modes?.length
-      ? model.parameters.modes
-      : model?.parameters?.methods;
+  const choices = model?.parameters?.modes?.length
+    ? model.parameters.modes
+    : model?.parameters?.methods;
   if (!Array.isArray(choices) || choices.length === 0) {
     return getWorkflowModelOptionValue(model);
   }
   const target = normalizeWorkflowModelIdentity(mode).toLowerCase();
   const choice =
-    choices.find((item) => String(item?.id || "").trim().toLowerCase() === target) ||
+    choices.find(
+      (item) =>
+        String(item?.id || "")
+          .trim()
+          .toLowerCase() === target,
+    ) ||
     choices.find((item) => item?.isDefault || item?.config?.isDefault) ||
     choices[0];
   const endpointId = normalizeWorkflowModelIdentity(
@@ -503,6 +508,59 @@ export type WorkflowImagePresetResult = {
   imageSize?: string;
 };
 
+type WorkflowTextModelsResponse = {
+  configured_model?: string;
+  provider?: string;
+  warning?: string;
+  models?: Array<{
+    id?: string;
+    name?: string;
+    owned_by?: string;
+  }>;
+};
+
+async function fetchWorkflowTextModelOptions() {
+  const response = await workflowFetch("/api/codex/models", {
+    headers: { Accept: "application/json" },
+  });
+  const payload = (await response.json().catch(() => ({}))) as
+    | WorkflowTextModelsResponse
+    | { error?: string };
+  if (!response.ok) {
+    throw new Error(
+      "error" in payload && payload.error
+        ? payload.error
+        : "文本模型目录加载失败: HTTP " + response.status,
+    );
+  }
+  const catalog = payload as WorkflowTextModelsResponse;
+  const configuredModel = String(catalog.configured_model || "").trim();
+  const provider = String(catalog.provider || "").trim();
+  const seen = new Set<string>();
+  const models = (Array.isArray(catalog.models) ? catalog.models : []).flatMap(
+    (item): WorkflowModelOption[] => {
+      const id = String(item?.id || "").trim();
+      if (!id || seen.has(id)) return [];
+      seen.add(id);
+      return [
+        {
+          id,
+          runtimeId: id,
+          modelId: id,
+          name: String(item?.name || id).trim() || id,
+          category: "chat",
+          description: String(item?.owned_by || "").trim() || undefined,
+          provider: provider || undefined,
+          providerKey: provider || undefined,
+          isDefault: id === configuredModel,
+        },
+      ];
+    },
+  );
+  if (!models.length && catalog.warning) throw new Error(catalog.warning);
+  return models;
+}
+
 export async function fetchWorkflowModelOptions(category: string) {
   const normalizedCategory = String(category || "")
     .trim()
@@ -513,19 +571,25 @@ export async function fetchWorkflowModelOptions(category: string) {
   const inFlight = workflowModelOptionsInFlight.get(normalizedCategory);
   if (inFlight) return inFlight;
 
-  const request = fetchWorkflowModelOptionsBootstrap()
-    .then((payload) => {
-      const rawModels = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.models)
-          ? payload.models
-          : [];
-      populateWorkflowModelOptionsCache(rawModels);
-      return workflowModelOptionsCache.get(normalizedCategory) || [];
-    })
-    .finally(() => {
-      workflowModelOptionsInFlight.delete(normalizedCategory);
-    });
+  const request = (
+    normalizedCategory === "chat"
+      ? fetchWorkflowTextModelOptions().then((models) => {
+          workflowModelOptionsCache.set(normalizedCategory, models);
+          workflowModelOptionsListeners.forEach((listener) => listener());
+          return models;
+        })
+      : fetchWorkflowModelOptionsBootstrap().then((payload) => {
+          const rawModels = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.models)
+              ? payload.models
+              : [];
+          populateWorkflowModelOptionsCache(rawModels);
+          return workflowModelOptionsCache.get(normalizedCategory) || [];
+        })
+  ).finally(() => {
+    workflowModelOptionsInFlight.delete(normalizedCategory);
+  });
   workflowModelOptionsInFlight.set(normalizedCategory, request);
   return request;
 }
@@ -829,6 +893,7 @@ export function populateWorkflowModelOptionsCache(rawModels: any[]) {
     grouped.set(category, [...(grouped.get(category) || []), model]);
   }
   for (const category of WORKFLOW_MODEL_CATEGORIES) {
+    if (category === "chat") continue;
     workflowModelOptionsCache.set(category, grouped.get(category) || []);
   }
   workflowModelOptionsListeners.forEach((listener) => listener());
