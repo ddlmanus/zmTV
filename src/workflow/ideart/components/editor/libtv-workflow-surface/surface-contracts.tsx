@@ -418,7 +418,7 @@ export type WorkflowOverlayNodeData = {
     id: string,
     capture: LibTvDirectorConsole3DCapture,
     options?: { batchIndex?: number; batchTotal?: number },
-  ) => void;
+  ) => Promise<void> | void;
   onCreateDirectorConsoleVideoNode?: (
     id: string,
     exported: LibTvDirectorConsole3DVideoExport,
@@ -550,7 +550,7 @@ export type LibTvWorkflowSurfaceProps = {
     id: string,
     capture: LibTvDirectorConsole3DCapture,
     options?: { batchIndex?: number; batchTotal?: number },
-  ) => void;
+  ) => Promise<void> | void;
   onCreateDirectorConsoleVideoNode?: (
     id: string,
     exported: LibTvDirectorConsole3DVideoExport,

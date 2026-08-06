@@ -18673,11 +18673,11 @@ export function LibTvWorkflowCanvas({
   );
 
   const handleCreateDirectorConsoleCaptureNode = useCallback(
-    (
+    async (
       sourceId: string,
       capture: LibTvDirectorConsole3DCapture,
       options?: { batchIndex?: number; batchTotal?: number },
-    ) => {
+    ): Promise<void> => {
       const captureUrl = String(capture.dataUrl || "").trim();
       const sourceNode = nodes.find((item) => item.id === sourceId);
       if (!sourceNode || sourceNode.kind !== "director-console-3d" || !captureUrl) return;
@@ -18687,7 +18687,7 @@ export function LibTvWorkflowCanvas({
             captureUrl,
             `director-console-${Date.now()}.png`,
           ).then((file) => uploadCanvasNodeFile(file));
-      void uploadPromise
+      await uploadPromise
         .then(({ publicUrl, libtvUrl }) => {
           const uploadedUrl = String(libtvUrl || publicUrl || "").trim();
           if (!/^https?:\/\//i.test(uploadedUrl)) {
@@ -18755,13 +18755,11 @@ export function LibTvWorkflowCanvas({
           setActiveWorkflowNode(nextNode.id);
         })
         .catch((error) => {
-          message.error(
-            error instanceof Error ? error.message : "3D 导演台截图上传失败",
-          );
           console.error(
             "[LibTvWorkflowCanvas] director console capture upload failed",
             error,
           );
+          throw error;
         });
     },
     [

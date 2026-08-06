@@ -172,7 +172,7 @@ export function TapNowDirectorConsole3DNode({
   upstreamNodes?: DirectorConsoleUpstreamNode[]
   onUpdateNode?: (id: string, patch: Partial<LibTvWorkflowNode["data"]>) => void
   onOpenDirectorConsole3D?: (id: string) => void
-  onCreateDirectorConsoleCaptureNode?: (id: string, capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => void
+  onCreateDirectorConsoleCaptureNode?: (id: string, capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => Promise<void> | void
   onCreateDirectorConsoleVideoNode?: (id: string, exported: LibTvDirectorConsole3DVideoExport) => Promise<void> | void
   projectId?: string
 }) {
@@ -1631,7 +1631,7 @@ function DirectorConsole3DOverlay({
   onUpdateState: (state: LibTvDirectorConsole3DState) => void
   onUpdatePreview?: (previewUrl: string) => void
   onPanoramaEditApplied?: (nextUrl: string, sourceNodeId?: string) => void
-  onCreateCaptureNode?: (capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => void
+  onCreateCaptureNode?: (capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => Promise<void> | void
   onCreateVideoNode?: (exported: LibTvDirectorConsole3DVideoExport) => Promise<void> | void
 }) {
   const connectedPanoramaSource = getDirectorConnectedPanoramaSource(node, upstreamNodes)
@@ -10646,7 +10646,7 @@ function DirectorConsole3DCaptures({
   onClear,
 }: {
   cameras: LibTvDirectorConsole3DCamera[]
-  onSend?: (capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => void
+  onSend?: (capture: LibTvDirectorConsole3DCapture, options?: { batchIndex?: number; batchTotal?: number }) => Promise<void> | void
   onDelete: (cameraId: string, captureId: string) => void
   onClear: () => void
 	}) {
@@ -10654,15 +10654,23 @@ function DirectorConsole3DCaptures({
 	    .map((camera) => ({ camera, captures: camera.captures || [] }))
 	    .filter((group) => group.captures.length > 0)
     const allCaptures = allCaptureGroups.flatMap((group) => group.captures)
-	  const sendCapture = useCallback((capture: LibTvDirectorConsole3DCapture) => {
+	  const sendCapture = useCallback(async (capture: LibTvDirectorConsole3DCapture) => {
 	    if (!onSend) return
-	    onSend(capture)
-	    message.success("已发送截图到画布")
+	    try {
+	      await onSend(capture)
+	      message.success("已发送截图到画布")
+	    } catch (error) {
+	      message.error(error instanceof Error ? error.message : "截图上传失败")
+	    }
 	  }, [onSend])
-	  const sendAllCaptures = () => {
+	  const sendAllCaptures = async () => {
 	    if (!onSend || allCaptures.length === 0) return
-	    allCaptures.forEach((capture, index) => onSend(capture, { batchIndex: index, batchTotal: allCaptures.length }))
-	    message.success(["已发送", allCaptures.length, "张截图到画布"].join(" "))
+	    try {
+	      await Promise.all(allCaptures.map((capture, index) => onSend(capture, { batchIndex: index, batchTotal: allCaptures.length })))
+	      message.success(["已发送", allCaptures.length, "张截图到画布"].join(" "))
+	    } catch (error) {
+	      message.error(error instanceof Error ? error.message : "截图上传失败")
+	    }
 	  }
 	  return (
     <div className="flex min-h-full flex-col">
