@@ -18678,86 +18678,81 @@ export function LibTvWorkflowCanvas({
       capture: LibTvDirectorConsole3DCapture,
       options?: { batchIndex?: number; batchTotal?: number },
     ) => {
+      const captureUrl = String(capture.dataUrl || "").trim();
       const sourceNode = nodes.find((item) => item.id === sourceId);
-      if (!sourceNode || sourceNode.kind !== "director-console-3d") return;
-      const sourceFrame = workflowNodeFrame(sourceNode.kind);
-      const ratioSize = parseWorkflowAspectRatioSize(
-        capture.aspectRatio || "16:9",
-        capture.width || 16,
-        capture.height || 9,
-      );
-      const imageFrame = workflowImageDisplayFrame(
-        ratioSize.width,
-        ratioSize.height,
-      );
-      const sourceWidth = Math.max(
-        sourceFrame.width,
-        Number(sourceNode.width || sourceFrame.width),
-      );
-      const sourceHeight = Math.max(
-        sourceFrame.height,
-        Number(sourceNode.height || sourceFrame.height),
-      );
-      const batchIndex = Math.max(
-        0,
-        Math.round(Number(options?.batchIndex || 0)),
-      );
-      const batchTotal = Math.max(
-        1,
-        Math.round(Number(options?.batchTotal || 1)),
-      );
-      const verticalGap = 36;
-      const batchHeight =
-        batchTotal * imageFrame.height +
-        Math.max(0, batchTotal - 1) * verticalGap;
-      const x = Math.round(Number(sourceNode.x || 0) + sourceWidth + 240);
-      const y = Math.round(
-        Number(sourceNode.y || 0) +
-          (sourceHeight - batchHeight) / 2 +
-          batchIndex * (imageFrame.height + verticalGap),
-      );
-      const nextNode = addWorkflowNode("image", {
-        x,
-        y,
-        linkFromNodeId: sourceId,
-        linkToNodeId: null,
-      });
-      moveWorkflowNode(nextNode.id, {
-        width: imageFrame.width,
-        height: imageFrame.height,
-        x,
-        y,
-      });
-      const sourceTitle =
-        String(sourceNode.data?.title || "3D 导演台").trim() || "3D 导演台";
-      const prompt = `来自 ${sourceTitle} 的${capture.name || "机位截图"}，作为 3D 构图参考图。`;
-      updateWorkflowNode(nextNode.id, {
-        title: capture.name || `${sourceTitle} 截图`,
-        mediaUrl: capture.dataUrl,
-        mediaRole: "ordinary",
-        content: "",
-        prompt,
-        note: "",
-        aspectRatio: capture.aspectRatio,
-        ...getWorkflowMediaNaturalSizePatch({
-          width: capture.width,
-          height: capture.height,
-        }),
-      });
-      selectLayer(nextNode.id);
-      setActiveWorkflowNode(nextNode.id);
-      void dataUrlToWorkflowFile(
-        capture.dataUrl,
-        `director-console-${Date.now()}.png`,
-      )
-        .then((file) => uploadCanvasNodeFile(file))
+      if (!sourceNode || sourceNode.kind !== "director-console-3d" || !captureUrl) return;
+      const uploadPromise = /^https?:\/\//i.test(captureUrl)
+        ? Promise.resolve({ publicUrl: captureUrl, libtvUrl: captureUrl })
+        : dataUrlToWorkflowFile(
+            captureUrl,
+            `director-console-${Date.now()}.png`,
+          ).then((file) => uploadCanvasNodeFile(file));
+      void uploadPromise
         .then(({ publicUrl, libtvUrl }) => {
-          const uploadedUrl = libtvUrl || publicUrl;
+          const uploadedUrl = String(libtvUrl || publicUrl || "").trim();
+          if (!/^https?:\/\//i.test(uploadedUrl)) {
+            throw new Error("截图上传未返回有效地址");
+          }
+          const latestWorkflow = useCanvasStore.getState().libtvWorkflow;
+          const latestSourceNode = latestWorkflow.nodes.find((item) => item.id === sourceId);
+          if (!latestSourceNode || latestSourceNode.kind !== "director-console-3d") {
+            throw new Error("3D 导演台节点不存在");
+          }
+          const sourceFrame = workflowNodeFrame(latestSourceNode.kind);
+          const ratioSize = parseWorkflowAspectRatioSize(
+            capture.aspectRatio || "16:9",
+            capture.width || 16,
+            capture.height || 9,
+          );
+          const imageFrame = workflowImageDisplayFrame(ratioSize.width, ratioSize.height);
+          const sourceWidth = Math.max(
+            sourceFrame.width,
+            Number(latestSourceNode.width || sourceFrame.width),
+          );
+          const sourceHeight = Math.max(
+            sourceFrame.height,
+            Number(latestSourceNode.height || sourceFrame.height),
+          );
+          const batchIndex = Math.max(0, Math.round(Number(options?.batchIndex || 0)));
+          const batchTotal = Math.max(1, Math.round(Number(options?.batchTotal || 1)));
+          const verticalGap = 36;
+          const batchHeight = batchTotal * imageFrame.height + Math.max(0, batchTotal - 1) * verticalGap;
+          const x = Math.round(Number(latestSourceNode.x || 0) + sourceWidth + 240);
+          const y = Math.round(
+            Number(latestSourceNode.y || 0) +
+              (sourceHeight - batchHeight) / 2 +
+              batchIndex * (imageFrame.height + verticalGap),
+          );
+          const nextNode = addWorkflowNode("image", {
+            x,
+            y,
+            linkFromNodeId: sourceId,
+            linkToNodeId: null,
+          });
+          moveWorkflowNode(nextNode.id, {
+            width: imageFrame.width,
+            height: imageFrame.height,
+            x,
+            y,
+          });
+          const sourceTitle =
+            String(latestSourceNode.data?.title || "3D 导演台").trim() || "3D 导演台";
+          const prompt = `来自 ${sourceTitle} 的${capture.name || "机位截图"}，作为 3D 构图参考图。`;
           updateWorkflowNode(nextNode.id, {
+            title: capture.name || `${sourceTitle} 截图`,
             mediaUrl: uploadedUrl,
             mediaRole: "ordinary",
+            content: "",
             prompt,
+            note: "",
+            aspectRatio: capture.aspectRatio,
+            ...getWorkflowMediaNaturalSizePatch({
+              width: capture.width,
+              height: capture.height,
+            }),
           });
+          selectLayer(nextNode.id);
+          setActiveWorkflowNode(nextNode.id);
         })
         .catch((error) => {
           message.error(

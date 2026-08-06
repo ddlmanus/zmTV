@@ -9,6 +9,7 @@ import { clone as cloneSkeletonObject } from "three/examples/jsm/utils/SkeletonU
 import { Box, Camera, Check, ChevronDown, CircleHelp, Clapperboard, Eye, EyeOff, Folder, FolderDown, Fullscreen, Grid2X2, ImageIcon, ImagePlus, Keyboard, ListChecks, Minimize2, MousePointer2, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Redo2, RefreshCw, ScanLine, Search, Share2, SlidersHorizontal, Sparkles, Trash2, Undo2, Upload, User, Users, Video, WandSparkles, X } from "lucide-react"
 import { message } from "@/workflow/ideart/shims/antd"
 import { ColorfulLoader } from "@/workflow/ideart/components/ui/colorful-loader"
+import { workflowResourceUrl } from "@/workflow/backend/client"
 import type {
   LibTvDirectorConsole3DCamera,
   LibTvDirectorConsole3DCapture,
@@ -44,6 +45,7 @@ import {
   sampleDirectorConsoleMotionPath,
 } from "@/workflow/ideart/lib/libtv/director-console-timeline"
 import { uploadCanvasNodeFile } from "../../libtv-upload-utils"
+import { dataUrlToWorkflowFile } from "../../libtv-workflow-canvas/workflow-canvas-media-utils"
 import { WorkflowHistoryDialog, type WorkflowHistoryFile } from "../../workflow-history-dialog"
 import {
   WorkflowSelect,
@@ -200,7 +202,18 @@ export function TapNowDirectorConsole3DNode({
   const handleUpdateDirectorPreview = useCallback((previewUrl: string) => {
     const nextPreviewUrl = String(previewUrl || "").trim()
     if (!nextPreviewUrl) return
-    onUpdateNode?.(node.id, { previewImageUrl: nextPreviewUrl })
+    if (!nextPreviewUrl.startsWith("data:image/")) {
+      onUpdateNode?.(node.id, { previewImageUrl: nextPreviewUrl })
+      return
+    }
+    void dataUrlToWorkflowFile(nextPreviewUrl, `director-console-preview-${Date.now()}.png`)
+      .then((file) => {
+        const previewObjectUrl = URL.createObjectURL(file)
+        onUpdateNode?.(node.id, { previewImageUrl: previewObjectUrl })
+      })
+      .catch((error) => {
+        console.warn("[director-console-3d] preview preparation failed", error)
+      })
   }, [node.id, onUpdateNode])
   const handlePanoramaEditApplied = useCallback((nextUrl: string, sourceNodeId?: string) => {
     const editedUrl = String(nextUrl || "").trim()
@@ -425,17 +438,21 @@ function directorCharacterAssetUrl(filename: string) {
 function getDirectorConsoleImageRenderUrl(src: string) {
   const value = String(src || "").trim()
   if (!value) return ""
-  if (value.startsWith("data:") || value.startsWith("blob:") || value.startsWith("/api/image-proxy?")) return value
-  if (/^https?:\/\//i.test(value)) return `/api/image-proxy?url=${encodeURIComponent(value)}`
-  return value
+  if (/^(?:data|blob|local-asset|zaomeng-workflow):/i.test(value)) return value
+  const renderUrl = /^https?:\/\//i.test(value)
+    ? `/api/image-proxy?url=${encodeURIComponent(value)}`
+    : value
+  return workflowResourceUrl(renderUrl)
 }
 
 function getDirectorConsoleModelLoadUrl(src: string) {
   const value = String(src || "").trim()
   if (!value) return ""
-  if (value.startsWith("data:") || value.startsWith("blob:") || value.startsWith("/api/image-proxy?")) return value
-  if (/^https?:\/\//i.test(value)) return `/api/image-proxy?proxyOnly=1&url=${encodeURIComponent(value)}`
-  return value
+  if (/^(?:data|blob|local-asset|zaomeng-workflow):/i.test(value)) return value
+  const loadUrl = /^https?:\/\//i.test(value)
+    ? `/api/image-proxy?proxyOnly=1&url=${encodeURIComponent(value)}`
+    : value
+  return workflowResourceUrl(loadUrl)
 }
 
 function cloneDirectorConsoleVector(value: Partial<LibTvDirectorConsole3DVector3> | undefined, fallback: LibTvDirectorConsole3DVector3): LibTvDirectorConsole3DVector3 {
@@ -3554,38 +3571,48 @@ function DirectorConsole3DOverlay({
   function captureCurrentView(createCamera: boolean) {
     const camera = createCamera ? addCameraFromCurrentView() : activeCamera
     window.setTimeout(() => {
-      const result = sceneRef.current?.capture(createCamera ? camera : null)
+      const result = sceneRef.current?.capture(camera || null)
       if (!result || !camera) {
         message.warning("当前 3D 画面还不能截图")
         return
       }
-      const captureAspectRatio = createCamera ? (camera.aspectRatio || "16:9") : `${result.width}:${result.height}`
-      const capture: LibTvDirectorConsole3DCapture = {
-        id: directorConsoleId("capture"),
-        name: `${camera.name} 截图${(camera.captures?.length || 0) + 1}`,
-        dataUrl: result.dataUrl,
-        width: result.width,
-        height: result.height,
-        cameraId: camera.id,
-        aspectRatio: captureAspectRatio,
-        createdAt: Date.now(),
-      }
-	      onUpdatePreview?.(result.dataUrl)
-	      applyStateChange((current) => ({
-	        ...current,
-	        cameras: current.cameras.map((item) => item.id === camera.id ? { ...item, captures: [...(item.captures || []), capture] } : item),
-	        activeCameraId: camera.id,
-	        activeObjectId: camera.id,
-	        selectedObjectIds: [],
-	        activeGroupId: undefined,
-	      }), { history: false })
-	      setSelectedTab("captures")
-	      message.success("已保存摄像机截图")
-	    }, 30)
-	  }
+      const captureId = directorConsoleId("capture")
+      const captureName = `${camera.name} 截图${(camera.captures?.length || 0) + 1}`
+      const captureAspectRatio = camera.aspectRatio || "16:9"
+      void dataUrlToWorkflowFile(result.dataUrl, `director-console-${captureId}.png`)
+        .then((file) => {
+          const previewUrl = URL.createObjectURL(file)
+          const capture: LibTvDirectorConsole3DCapture = {
+            id: captureId,
+            name: captureName,
+            dataUrl: previewUrl,
+            width: result.width,
+            height: result.height,
+            cameraId: camera.id,
+            aspectRatio: captureAspectRatio,
+            createdAt: Date.now(),
+          }
+          onUpdatePreview?.(previewUrl)
+          applyStateChange((current) => ({
+            ...current,
+            cameras: current.cameras.map((item) => item.id === camera.id ? { ...item, captures: [...(item.captures || []), capture] } : item),
+            activeCameraId: camera.id,
+            activeObjectId: camera.id,
+            selectedObjectIds: [],
+            activeGroupId: undefined,
+          }), { history: false })
+          setSelectedTab("captures")
+          message.success("已保存摄像机截图")
+        })
+        .catch((error) => {
+          message.error(error instanceof Error ? error.message : "截图保存失败")
+          console.error("[director-console-3d] capture preparation failed", error)
+        })
+    }, 30)
+  }
 
   function closeDirectorConsoleWithPreview() {
-    const result = sceneRef.current?.capture(viewMode === "camera" ? activeCamera : null)
+    const result = sceneRef.current?.capture(activeCamera || null)
     if (result?.dataUrl) onUpdatePreview?.(result.dataUrl)
     onClose()
   }
