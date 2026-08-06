@@ -109,12 +109,10 @@ interface FeaturedModelsPanelProps {
 
 function PosterCard({
   family,
-  price,
   onClick,
   className,
 }: {
   family: (typeof FEATURED_MODEL_FAMILIES)[number];
-  price: number | undefined;
   onClick: () => void;
   className?: string;
 }) {
@@ -159,11 +157,6 @@ function PosterCard({
               {tag}
             </span>
           ))}
-          {price !== undefined && (
-            <span className="text-[8px] rounded-full px-1.5 py-[2px] leading-none text-white/90 bg-white/20 ml-auto">
-              ${price.toFixed(3)}
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -172,15 +165,9 @@ function PosterCard({
 
 export function FeaturedModelsPanel({
   onSelectFeatured,
-  models,
   mobile,
   workspace = "image",
 }: FeaturedModelsPanelProps) {
-  const getPrice = (modelId: string) => {
-    const model = models.find((m) => m.model_id === modelId);
-    return model?.base_price;
-  };
-
   const scopedFamilies = FEATURED_MODEL_FAMILIES.filter(
     (f) =>
       getModelWorkspace({
@@ -226,7 +213,6 @@ export function FeaturedModelsPanel({
     <PosterCard
       key={family.primaryVariant}
       family={family}
-      price={getPrice(family.primaryVariant)}
       onClick={() => onSelectFeatured(family.primaryVariant)}
       className={cls}
     />

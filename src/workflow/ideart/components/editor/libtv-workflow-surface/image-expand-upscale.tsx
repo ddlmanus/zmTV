@@ -30,7 +30,6 @@ import {
   isGeminiAspectRatioKey,
   type GeminiAspectRatioKey,
 } from "@/workflow/ideart/lib/models/gemini-image-config";
-import { estimateImageGenerationPoints } from "@/workflow/ideart/lib/models/billing-estimate";
 import { WorkflowExtraParametersPanel } from "./workflow-extra-parameters";
 import { WorkflowAnchoredPopover } from "./workflow-anchored-popover";
 import {
@@ -42,7 +41,7 @@ import {
   stopWorkflowNodeChromeEvent,
 } from "./nodes/workflow-node-utils";
 import { message } from "@/workflow/ideart/shims/antd";
-import { AspectRatioIcon, SparklesTokenIcon } from "./workflow-icons";
+import { AspectRatioIcon } from "./workflow-icons";
 import { CANVAS_CONTROLS_MENU_PANEL_STYLE } from "./surface-contracts";
 import {
   getWorkflowImageRenderUrl,
@@ -442,17 +441,6 @@ export function WorkflowDropdown({
   );
 }
 
-export function WorkflowLightningCost({ cost }: { cost: number }) {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-[2px] text-white/62">
-      <SparklesTokenIcon className="h-[14px] w-[10px]" />
-      <span className="min-w-[13px] text-center text-[12px] leading-[15px]">
-        {cost}
-      </span>
-    </span>
-  );
-}
-
 export function WorkflowExpandToolbarMenu({
   open,
   icon,
@@ -643,7 +631,6 @@ export function WorkflowImageUpscalePanel({
             })
           }
         >
-          <WorkflowLightningCost cost={selectedSize.cost} />
           生成
         </button>
       </div>
@@ -1082,7 +1069,6 @@ export function WorkflowImageUpscaleGenerationBar({
           </div>
           <div className="flex justify-end">
             <div className="flex h-8 items-center gap-2 text-white/55">
-              <WorkflowLightningCost cost={Number(selectedModel.cost || 15)} />
               <button
                 type="button"
                 disabled={!canSubmit}
@@ -1260,7 +1246,6 @@ export function WorkflowVideoUpscalePanel({
       (item) => item.value === requestedModelId,
     ) || WORKFLOW_VIDEO_UPSCALE_MODEL_OPTIONS[0];
   const modelId = selectedModel.value;
-  const cost = resolution === "4K" ? 48 : resolution === "2K" ? 36 : 24;
 
   const patch = useCallback(
     (next: Partial<LibTvWorkflowNode["data"]>) => {
@@ -1343,7 +1328,6 @@ export function WorkflowVideoUpscalePanel({
 
             <div className="flex justify-end">
               <div className="flex h-8 items-center gap-2 text-white/58">
-                <WorkflowLightningCost cost={cost} />
                 {running && progressLabel ? (
                   <span className="text-[12px] tabular-nums">
                     {progressLabel}
@@ -1552,12 +1536,6 @@ export function WorkflowImageExpandPanel({
         target.height / naturalSize.height,
       )
     : 1;
-  const totalCost = estimateImageGenerationPoints(
-    imageSettings.selectedModel,
-    selectedCount,
-    imageSettings.resolution,
-    imageSettings.quality,
-  ).totalPoints;
   const hasAdvancedParameters =
     imageSettings.supportsWebSearch ||
     imageSettings.advancedDefinitions.length > 0;
@@ -1901,7 +1879,6 @@ export function WorkflowImageExpandPanel({
               </div>
             ) : null}
             <div className="flex h-8 min-w-16 items-center gap-2 text-white/62">
-              <WorkflowLightningCost cost={totalCost} />
               <button
                 type="button"
                 disabled={!canRun}

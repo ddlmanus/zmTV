@@ -63,6 +63,7 @@ import {
   type LibTvDirectorConsole3DCapture,
   type LibTvWorkflowNode,
   type LibTvWorkflowNodeKind,
+  type LibTvWorkflowState,
 } from "@/workflow/ideart/lib/libtv/workflow";
 import {
   createEmptyStoryboardScriptRow,
@@ -666,8 +667,7 @@ const WORKFLOW_CHAT_PLACEHOLDER_GAP = 32;
 const WORKFLOW_CHAT_PLACEHOLDER_BATCH_TTL_MS = 12_000;
 function workflowModelDeclaresOptions(
   items:
-    | Array<{ id?: string; label?: string; isDefault?: boolean }>
-    | undefined,
+    Array<{ id?: string; label?: string; isDefault?: boolean }> | undefined,
 ) {
   return (
     Array.isArray(items) &&
@@ -3148,13 +3148,11 @@ function collectWorkflowVideoUrls(payload: any): string[] {
     if (!value) return;
     if (typeof value === "string") {
       const url = value.trim();
-      if (
-        !(
-          url.startsWith("http://") ||
-          url.startsWith("https://") ||
-          url.startsWith("/")
-        )
-      )
+      if (!(
+        url.startsWith("http://") ||
+        url.startsWith("https://") ||
+        url.startsWith("/")
+      ))
         return;
       const isImageUrl =
         /\.(?:png|jpe?g|webp|gif|bmp|avif|svg)(?:[?#]|$)/i.test(url);
@@ -4788,6 +4786,33 @@ export function LibTvWorkflowCanvas({
   ).trim();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const onCanvasWorkspaceChangeRef = useRef(onCanvasWorkspaceChange);
+  const pendingCanvasWorkspaceChangeRef = useRef<{
+    activeId: string;
+    canvases: LibTvProjectCanvas[];
+    workflow: LibTvWorkflowState;
+    viewport: LibTvProjectCanvasViewport;
+  } | null>(null);
+  const canvasWorkspaceChangeTimerRef = useRef<number | null>(null);
+  const flushCanvasWorkspaceChange = useCallback(() => {
+    const pending = pendingCanvasWorkspaceChangeRef.current;
+    const callback = onCanvasWorkspaceChangeRef.current;
+    if (!pending || !callback) return;
+    pendingCanvasWorkspaceChangeRef.current = null;
+    const snapshot = normalizeLibTvProjectCanvases(
+      pending.canvases,
+      pending.workflow,
+    ).map((canvas) =>
+      canvas.id === pending.activeId
+        ? {
+            ...canvas,
+            libtvWorkflow: normalizeLibTvWorkflowState(pending.workflow),
+            viewport: pending.viewport,
+          }
+        : canvas,
+    );
+    callback(snapshot, pending.activeId);
+  }, []);
   const [workflowCanvasSize, setWorkflowCanvasSize] = useState<{
     width: number;
     height: number;
@@ -4818,8 +4843,8 @@ export function LibTvWorkflowCanvas({
     useState<LibTvProjectCanvasViewport>(() => ({
       ...DEFAULT_LIBTV_PROJECT_CANVAS_VIEWPORT,
     }));
-  const [workflowEdgesVisible] = useState(true);
-  const [workflowSnapToGrid] = useState(false);
+  const [workflowEdgesVisible, setWorkflowEdgesVisible] = useState(true);
+  const [workflowSnapToGrid, setWorkflowSnapToGrid] = useState(false);
   const [workflowCanvasTheme, setWorkflowCanvasTheme] = useState<
     "dark" | "light"
   >("dark");
@@ -5249,25 +5274,37 @@ export function LibTvWorkflowCanvas({
   }, [activeWorkflowCanvasId, workflow]);
 
   useEffect(() => {
-    if (!onCanvasWorkspaceChange) return;
+    onCanvasWorkspaceChangeRef.current = onCanvasWorkspaceChange;
+  }, [onCanvasWorkspaceChange]);
+
+  useEffect(() => {
+    if (!onCanvasWorkspaceChange) {
+      if (canvasWorkspaceChangeTimerRef.current !== null) {
+        window.clearTimeout(canvasWorkspaceChangeTimerRef.current);
+        canvasWorkspaceChangeTimerRef.current = null;
+      }
+      pendingCanvasWorkspaceChangeRef.current = null;
+      return;
+    }
     if (hydratedWorkflowProjectId !== (projectId || "__local__")) return;
     const activeId =
       String(activeWorkflowCanvasId || "default").trim() || "default";
-    const snapshot = normalizeLibTvProjectCanvases(
-      workflowCanvases,
+    pendingCanvasWorkspaceChangeRef.current = {
+      activeId,
+      canvases: workflowCanvases,
       workflow,
-    ).map((canvas) =>
-      canvas.id === activeId
-        ? {
-            ...canvas,
-            libtvWorkflow: normalizeLibTvWorkflowState(workflow),
-            viewport: workflowViewport,
-          }
-        : canvas,
-    );
-    onCanvasWorkspaceChange(snapshot, activeId);
+      viewport: workflowViewport,
+    };
+    if (canvasWorkspaceChangeTimerRef.current !== null) {
+      window.clearTimeout(canvasWorkspaceChangeTimerRef.current);
+    }
+    canvasWorkspaceChangeTimerRef.current = window.setTimeout(() => {
+      canvasWorkspaceChangeTimerRef.current = null;
+      flushCanvasWorkspaceChange();
+    }, 240);
   }, [
     activeWorkflowCanvasId,
+    flushCanvasWorkspaceChange,
     hydratedWorkflowProjectId,
     onCanvasWorkspaceChange,
     projectId,
@@ -5275,6 +5312,17 @@ export function LibTvWorkflowCanvas({
     workflowCanvases,
     workflowViewport,
   ]);
+
+  useEffect(
+    () => () => {
+      if (canvasWorkspaceChangeTimerRef.current !== null) {
+        window.clearTimeout(canvasWorkspaceChangeTimerRef.current);
+        canvasWorkspaceChangeTimerRef.current = null;
+      }
+      flushCanvasWorkspaceChange();
+    },
+    [flushCanvasWorkspaceChange],
+  );
 
   const createResumeTaskAbortController = useCallback(() => {
     const controller = new AbortController();
@@ -7545,13 +7593,11 @@ export function LibTvWorkflowCanvas({
         const sourceUrl = String(node.data?.mediaUrl || "").trim();
         if (!/^https?:\/\//i.test(sourceUrl)) return false;
         if (persistedExistingVideoUrlsRef.current.has(sourceUrl)) return false;
-        if (
-          !(
-            node.data?.mediaRole === "generator" ||
-            node.data?.componentType === "video-generator" ||
-            String(node.data?.workflowGenerationTaskId || "").trim()
-          )
-        )
+        if (!(
+          node.data?.mediaRole === "generator" ||
+          node.data?.componentType === "video-generator" ||
+          String(node.data?.workflowGenerationTaskId || "").trim()
+        ))
           return false;
         return !isPersistedWorkflowVideoUrl(sourceUrl);
       })
@@ -22850,9 +22896,24 @@ export function LibTvWorkflowCanvas({
         ) : null}
         {!readOnly ? (
           <WorkflowBottomControls
+            nodes={nodes}
             zoom={viewportZoom}
+            viewport={workflowViewport}
+            viewportSize={workflowCanvasSize}
             onFitView={handleFitView}
             onZoomTo={handleZoomTo}
+            onOpenAssetLibrary={() =>
+              setWorkflowAssetDrawerOpen((open) => !open)
+            }
+            edgesVisible={workflowEdgesVisible}
+            snapToGrid={workflowSnapToGrid}
+            onToggleEdgesVisible={() =>
+              setWorkflowEdgesVisible((visible) => !visible)
+            }
+            onToggleSnapToGrid={() =>
+              setWorkflowSnapToGrid((enabled) => !enabled)
+            }
+            getNodeFrame={workflowNodeFrame}
           />
         ) : null}
         {!readOnly ? (
@@ -23021,7 +23082,7 @@ export function LibTvWorkflowCanvas({
       </div>
       {!readOnly ? (
         <CodexSupportWidget
-          label="导演Agent"
+          label="聊天"
           scope="workflow"
           launcherIcon="director"
           workflowProjectId={projectId}

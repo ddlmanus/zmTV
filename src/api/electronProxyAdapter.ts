@@ -35,7 +35,7 @@ function requestHeaders(config: InternalAxiosRequestConfig) {
   const result: Record<string, string> = {};
   const headers = AxiosHeaders.from(config.headers).toJSON();
   for (const [name, value] of Object.entries(headers)) {
-    if (value === null || value === undefined || value === false) continue;
+    if (value === null || value === undefined) continue;
     result[name] = Array.isArray(value) ? value.join(", ") : String(value);
   }
   return result;

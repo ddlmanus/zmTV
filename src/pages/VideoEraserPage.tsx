@@ -17,7 +17,6 @@ import { useApiKeyStore } from "@/stores/apiKeyStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { detectAssetType, useAssetsStore } from "@/stores/assetsStore";
-import { applyDiscount, getModelDiscountRate } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { Model, SchemaProperty } from "@/types/model";
 import type { HistoryItem } from "@/types/prediction";
@@ -149,19 +148,6 @@ function extractOutputUrl(
   return null;
 }
 
-function formatPrice(value?: number) {
-  if (typeof value !== "number") return null;
-  return value < 0.01 ? value.toFixed(4) : value.toFixed(3);
-}
-
-function formatBalance(value: number | null) {
-  if (typeof value !== "number") return null;
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  });
-}
-
 const savedVideoEraserPredictionIds = new Set<string>();
 
 function autoSaveVideoEraserOutputs(
@@ -218,7 +204,7 @@ export function VideoEraserPage() {
     mask: 0,
   });
 
-  const { apiKey, isValidated, requestApiKey } = useApiKeyStore();
+  const { isValidated, requestApiKey } = useApiKeyStore();
   const { models, fetchModels } = useModelsStore();
   const {
     tabs,
@@ -257,8 +243,6 @@ export function VideoEraserPage() {
   const [remoteHistory, setRemoteHistory] = useState<HistoryItem[]>([]);
   const [isRemoteHistoryLoading, setIsRemoteHistoryLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -282,38 +266,12 @@ export function VideoEraserPage() {
     () => models.find((model) => model.model_id === VIDEO_ERASER_MODEL_ID),
     [models],
   );
-  const price = useMemo(() => {
-    if (typeof resolvedModel?.base_price !== "number") return null;
-    return applyDiscount(
-      resolvedModel.base_price,
-      getModelDiscountRate(resolvedModel),
-    );
-  }, [resolvedModel]);
-  const displayPrice = formatPrice(price?.discountedPrice);
-  const displayBalance = formatBalance(balance);
   const videoHistoryTab = useMemo(() => {
     const videoTabs = tabs.filter((tab) => tab.workspace === "video");
     return (
       videoTabs.find((tab) => tab.id === activeTabId) ?? videoTabs[0] ?? null
     );
   }, [activeTabId, tabs]);
-
-  const fetchBalance = useCallback(async () => {
-    if (!apiKey || !isValidated) {
-      setBalance(null);
-      return;
-    }
-
-    setIsBalanceLoading(true);
-    try {
-      setBalance(await apiClient.getBalance());
-    } catch (err) {
-      console.warn("[video-eraser] balance failed", err);
-      setBalance(null);
-    } finally {
-      setIsBalanceLoading(false);
-    }
-  }, [apiKey, isValidated]);
 
   const fetchMyGenerations = useCallback(async () => {
     if (!isValidated) return;
@@ -338,10 +296,6 @@ export function VideoEraserPage() {
       setIsRemoteHistoryLoading(false);
     }
   }, [isValidated, models]);
-
-  useEffect(() => {
-    void fetchBalance();
-  }, [fetchBalance]);
 
   useEffect(() => {
     if (!isValidated) return;
@@ -467,7 +421,6 @@ export function VideoEraserPage() {
         formValues,
       });
       autoSaveVideoEraserOutputs(outputs, prediction.id);
-      void fetchBalance();
       void fetchMyGenerations();
     } catch (err) {
       const message =
@@ -480,12 +433,9 @@ export function VideoEraserPage() {
       setIsGenerating(false);
     }
   }, [
-    apiKey,
     completeExternalGeneration,
     failExternalGeneration,
-    fetchBalance,
     fetchMyGenerations,
-    isValidated,
     requestApiKey,
     maskUrl,
     prompt,
@@ -690,9 +640,6 @@ export function VideoEraserPage() {
                 <Sparkles className="h-4 w-4" />
               )}
               <span>{t("freeTools.videoEraser.generate")}</span>
-              {displayPrice && (
-                <span className="font-bold">${displayPrice}</span>
-              )}
             </button>
             <button
               type="button"
@@ -702,18 +649,6 @@ export function VideoEraserPage() {
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--playground-sidebar-muted))]">
-              {t("freeTools.videoEraser.balance")}
-            </span>
-            <span className="font-medium text-white/80">
-              {isBalanceLoading
-                ? t("common.loading", "Loading...")
-                : displayBalance
-                  ? `$${displayBalance}`
-                  : "-"}
-            </span>
           </div>
         </div>
       </aside>

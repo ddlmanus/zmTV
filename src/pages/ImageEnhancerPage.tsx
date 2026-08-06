@@ -23,7 +23,6 @@ import { useApiKeyStore } from "@/stores/apiKeyStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { detectAssetType, useAssetsStore } from "@/stores/assetsStore";
-import { applyDiscount, getModelDiscountRate } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "@/types/prediction";
 import {
@@ -58,11 +57,6 @@ function extractOutputUrl(
     if (typeof value === "string" && value.trim()) return value;
   }
   return null;
-}
-
-function formatPrice(value?: number) {
-  if (typeof value !== "number") return null;
-  return value < 0.01 ? value.toFixed(4) : value.toFixed(3);
 }
 
 const savedEnhancerPredictionIds = new Set<string>();
@@ -169,19 +163,6 @@ export function ImageEnhancerPage() {
       if (localPreview?.startsWith("blob:")) URL.revokeObjectURL(localPreview);
     };
   }, [localPreview]);
-
-  const upscalerModel = useMemo(
-    () => models.find((model) => model.model_id === IMAGE_UPSCALER_MODEL_ID),
-    [models],
-  );
-  const price = useMemo(() => {
-    if (typeof upscalerModel?.base_price !== "number") return null;
-    return applyDiscount(
-      upscalerModel.base_price,
-      getModelDiscountRate(upscalerModel),
-    );
-  }, [upscalerModel]);
-  const displayPrice = formatPrice(price?.discountedPrice);
 
   const imageHistoryTab = useMemo(() => {
     const imageTabs = tabs.filter((tab) => tab.workspace === "image");
@@ -547,9 +528,6 @@ export function ImageEnhancerPage() {
                 <ImageUp className="h-4 w-4" />
               )}
               <span>{t("freeTools.imageEnhancer.enhance")}</span>
-              {displayPrice && (
-                <span className="font-bold">${displayPrice}</span>
-              )}
             </button>
             <button
               type="button"
@@ -559,14 +537,6 @@ export function ImageEnhancerPage() {
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--playground-sidebar-muted))]">
-              {t("freeTools.imageEnhancer.credits")}
-            </span>
-            <span className="font-medium text-white/80">
-              {displayPrice ? `$${displayPrice}` : "-"}
-            </span>
           </div>
         </div>
       </aside>

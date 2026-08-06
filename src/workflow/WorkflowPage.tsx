@@ -77,7 +77,10 @@ export function WorkflowPage() {
     let cancelled = false;
     const localWorkspace = readDesktopCanvasWorkspace();
 
-    const useWorkspace = (workspace: DesktopCanvasWorkspace, title = "画布") => {
+    const useWorkspace = (
+      workspace: DesktopCanvasWorkspace,
+      title = "画布",
+    ) => {
       if (cancelled) return;
       applyWorkspaceToCanvasStore(workspace, title);
       writeDesktopCanvasWorkspace(workspace.canvases, workspace.activeCanvasId);
@@ -99,9 +102,7 @@ export function WorkflowPage() {
           .json()
           .catch(() => ({}))) as DesktopWorkflowProject;
         if (!response.ok) {
-          throw new Error(
-            project.error || "工作流项目加载失败",
-          );
+          throw new Error(project.error || "工作流项目加载失败");
         }
         const remoteWorkspace = workspaceFromProject(project);
         if (remoteWorkspace) {
@@ -148,20 +149,19 @@ export function WorkflowPage() {
           canvases,
           activeCanvasId,
         );
-        void workflowFetch(
-          "/api/projects/" + DESKTOP_WORKFLOW_PROJECT_ID,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content, responseView: "lite" }),
-          },
-        ).then((response) => {
-          if (!response.ok) {
-            throw new Error("工作流项目保存失败: HTTP " + response.status);
-          }
-        }).catch((error) => {
-          console.error("Failed to save desktop workflow project:", error);
-        });
+        void workflowFetch("/api/projects/" + DESKTOP_WORKFLOW_PROJECT_ID, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content, responseView: "lite" }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("工作流项目保存失败: HTTP " + response.status);
+            }
+          })
+          .catch((error) => {
+            console.error("Failed to save desktop workflow project:", error);
+          });
       }, 600);
     },
     [],
@@ -185,7 +185,7 @@ export function WorkflowPage() {
   }
 
   return (
-    <main className="zaomeng-workflow-page flex h-full w-full overflow-hidden bg-black">
+    <main className="zaomeng-workflow-page relative flex h-full w-full overflow-hidden bg-black">
       <LibTvWorkflowCanvas
         imageUrl={null}
         initialCanvases={initialWorkspace.canvases}

@@ -160,12 +160,6 @@ export function PromptOptimizer({
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
               {t("playground.optimizer.title")}
-              {optimizerModel?.base_price !== undefined && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  (${optimizerModel.base_price.toFixed(3)}/
-                  {t("playground.optimizer.perRun")})
-                </span>
-              )}
             </DialogTitle>
             <DialogDescription className="sr-only">
               {t("playground.optimizer.tooltip")}

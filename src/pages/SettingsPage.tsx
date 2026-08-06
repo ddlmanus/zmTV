@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useApiKeyStore } from "@/stores/apiKeyStore";
-import {
-  ZAOMENG_OPEN_API_BASE_URL,
-  apiClient,
-  type BalanceTransaction,
-} from "@/api/client";
+import { ZAOMENG_OPEN_API_BASE_URL } from "@/api/client";
 import { useApiServiceStore } from "@/stores/apiServiceStore";
 import { useThemeStore, type Theme } from "@/stores/themeStore";
 import { useAssetsStore } from "@/stores/assetsStore";
@@ -69,10 +65,8 @@ import {
   X,
   Clock,
   Settings,
-  ReceiptText,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 
 interface CacheItem {
   cacheName: string;
@@ -116,57 +110,6 @@ function createPredownloadStates() {
   );
 }
 
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
-}
-
-function getBalanceTransactionTypeLabel(type: string) {
-  const labels: Record<string, string> = {
-    CONSUME: "消费",
-    REFUND: "退款",
-    RECHARGE: "充值",
-    ADMIN_ADJUST: "后台调整",
-    MANUAL_CORRECTION: "人工修正",
-  };
-  return labels[type] || type || "其他";
-}
-
-function getBalanceTransactionSignedAmount(item: BalanceTransaction) {
-  const rawAmount = Number(item.amount || 0);
-  const balanceDelta =
-    Number(item.balance_after || 0) - Number(item.balance_before || 0);
-  const normalizedType = String(item.type || "").toUpperCase();
-  const isDebit = ["CONSUME", "DEDUCT", "CHARGE"].includes(normalizedType);
-  const isCredit = ["RECHARGE", "REFUND"].includes(normalizedType);
-
-  if (isDebit) {
-    const debitAmount = rawAmount === 0 ? Math.abs(balanceDelta) : rawAmount;
-    return -Math.abs(debitAmount);
-  }
-  if (isCredit) {
-    const creditAmount = rawAmount === 0 ? Math.abs(balanceDelta) : rawAmount;
-    return Math.abs(creditAmount);
-  }
-  if (rawAmount !== 0) return rawAmount;
-  return balanceDelta;
-}
-
-function formatUsdAmount(value: number, precision = 4) {
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-  return `${sign}$${Math.abs(value).toFixed(precision)}`;
-}
-
-function getBalanceTransactionDescription(item: BalanceTransaction) {
-  const description = String(item.description || "").trim();
-  if (description) return description;
-  const referenceId = String(item.reference_id || "").trim();
-  if (referenceId) return referenceId;
-  return "余额变动";
-}
-
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
   const {
@@ -197,20 +140,6 @@ export function SettingsPage() {
   useEffect(() => {
     setInputKey(apiKey);
   }, [apiKey]);
-
-  // Balance state
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [showBalanceTransactions, setShowBalanceTransactions] = useState(false);
-  const [balanceTransactions, setBalanceTransactions] = useState<
-    BalanceTransaction[]
-  >([]);
-  const [balanceTransactionsPage, setBalanceTransactionsPage] = useState(1);
-  const [balanceTransactionsTotalPages, setBalanceTransactionsTotalPages] =
-    useState(1);
-  const [balanceTransactionsTotal, setBalanceTransactionsTotal] = useState(0);
-  const [isLoadingBalanceTransactions, setIsLoadingBalanceTransactions] =
-    useState(false);
 
   // Update state
   const [appVersion, setAppVersion] = useState<string>("");
@@ -569,55 +498,6 @@ export function SettingsPage() {
     }
   }, [downloadPredownloadModel, loadCacheDetails, loadPredownloadStatus, t]);
 
-  // Fetch account balance
-  const fetchBalance = useCallback(async () => {
-    if (!isValidated) return;
-    setIsLoadingBalance(true);
-    try {
-      const bal = await apiClient.getBalance();
-      setBalance(bal);
-    } catch {
-      toast({
-        title: t("common.error"),
-        description: t("settings.balance.refreshFailed"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingBalance(false);
-    }
-  }, [isValidated, t]);
-
-  const fetchBalanceTransactions = useCallback(
-    async (page = 1) => {
-      if (!isValidated) return;
-      setIsLoadingBalanceTransactions(true);
-      try {
-        const result = await apiClient.getBalanceTransactions(page, 20);
-        setBalanceTransactions(result.items || []);
-        setBalanceTransactionsPage(result.page || page);
-        setBalanceTransactionsTotalPages(result.total_pages || 1);
-        setBalanceTransactionsTotal(result.total || 0);
-      } catch {
-        toast({
-          title: t("common.error"),
-          description: t(
-            "settings.balance.transactionsRefreshFailed",
-            "Failed to fetch balance transactions",
-          ),
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingBalanceTransactions(false);
-      }
-    },
-    [isValidated, t],
-  );
-
-  const openBalanceTransactions = useCallback(() => {
-    setShowBalanceTransactions(true);
-    void fetchBalanceTransactions(1);
-  }, [fetchBalanceTransactions]);
-
   // Delete a single cache item
   const handleDeleteCacheItem = useCallback(
     async (item: CacheItem) => {
@@ -794,15 +674,6 @@ export function SettingsPage() {
     calculateCacheSize,
     loadPredownloadStatus,
   ]);
-
-  // Fetch balance when authenticated
-  useEffect(() => {
-    if (isValidated) {
-      fetchBalance();
-    } else {
-      setBalance(null);
-    }
-  }, [isValidated, fetchBalance]);
 
   // Subscribe to update status events
   useEffect(() => {
@@ -1115,8 +986,7 @@ export function SettingsPage() {
             <div>
               <CardTitle>API 服务</CardTitle>
               <CardDescription>
-                模型、生成、上传、任务轮询、余额和历史记录统一使用造梦 API
-                开放平台。
+                模型、生成、上传、任务轮询和历史记录统一使用造梦 API 开放平台。
               </CardDescription>
             </div>
             <Badge variant="secondary" className="shrink-0">
@@ -1225,62 +1095,6 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {isValidated && (
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{t("settings.balance.title")}</CardTitle>
-                <CardDescription>
-                  {t("settings.balance.description")}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-1">
-                {apiClient.supportsBalanceTransactions() ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={openBalanceTransactions}
-                    disabled={!isValidated}
-                    title={t("settings.balance.transactions", "Transactions")}
-                  >
-                    <ReceiptText className="h-4 w-4" />
-                  </Button>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={fetchBalance}
-                  disabled={isLoadingBalance}
-                  title={t("common.refresh", "Refresh")}
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${isLoadingBalance ? "animate-spin" : ""}`}
-                  />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">
-                {isLoadingBalance ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : balance !== null ? (
-                  Number.isFinite(balance) ? (
-                    `$${balance.toFixed(2)}`
-                  ) : (
-                    t("settings.balance.unlimited", "无限额度")
-                  )
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card className="mt-6">
         <CardHeader>
@@ -1624,130 +1438,6 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      <Dialog
-        open={showBalanceTransactions}
-        onOpenChange={setShowBalanceTransactions}
-      >
-        <DialogContent className="max-w-3xl max-h-[78vh] flex flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between border-b px-6 py-4">
-              <span className="flex items-center gap-2 text-lg">
-                <ReceiptText className="h-4 w-4 text-muted-foreground" />
-                {t("settings.balance.transactions", "Balance Details")}
-              </span>
-              <span className="text-sm font-normal text-muted-foreground">
-                {t("settings.balance.transactionTotal", {
-                  count: balanceTransactionsTotal,
-                  defaultValue: "{{count}} records",
-                })}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto px-6 py-2">
-            {isLoadingBalanceTransactions ? (
-              <div className="flex items-center justify-center py-12 text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("common.loading", "Loading...")}
-              </div>
-            ) : balanceTransactions.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-12">
-                {t("settings.balance.noTransactions", "No balance records")}
-              </p>
-            ) : (
-              <div className="divide-y">
-                {balanceTransactions.map((item) => {
-                  const signedAmount = getBalanceTransactionSignedAmount(item);
-                  const isDebit = signedAmount < 0;
-                  const typeLabel = getBalanceTransactionTypeLabel(item.type);
-                  const description = getBalanceTransactionDescription(item);
-                  return (
-                    <div
-                      key={item.id}
-                      className="grid gap-4 py-4 md:grid-cols-[minmax(0,1fr)_150px] md:items-center"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="shrink-0 font-medium text-foreground">
-                            {typeLabel}
-                          </span>
-                          {item.model_id ? (
-                            <span
-                              className="min-w-0 truncate text-sm text-muted-foreground"
-                              title={item.model_id}
-                            >
-                              {item.model_id}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div
-                          className="mt-1 truncate text-sm text-muted-foreground"
-                          title={description}
-                        >
-                          {description}
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span>{formatDateTime(item.created_at)}</span>
-                          <span>
-                            {t("settings.balance.balanceAfter", "Balance")} $
-                            {item.balance_after.toFixed(4)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-left md:text-right">
-                        <div
-                          className={cn(
-                            "text-base font-semibold tabular-nums",
-                            isDebit ? "text-red-400" : "text-emerald-400",
-                          )}
-                        >
-                          {formatUsdAmount(signedAmount)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between border-t bg-muted/20 px-6 py-4 text-sm">
-            <span className="text-muted-foreground">
-              {t("settings.balance.transactionPage", {
-                page: balanceTransactionsPage,
-                totalPages: balanceTransactionsTotalPages,
-                defaultValue: "Page {{page}} / {{totalPages}}",
-              })}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={
-                  balanceTransactionsPage <= 1 || isLoadingBalanceTransactions
-                }
-                onClick={() =>
-                  fetchBalanceTransactions(balanceTransactionsPage - 1)
-                }
-              >
-                {t("common.previous", "Previous")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={
-                  balanceTransactionsPage >= balanceTransactionsTotalPages ||
-                  isLoadingBalanceTransactions
-                }
-                onClick={() =>
-                  fetchBalanceTransactions(balanceTransactionsPage + 1)
-                }
-              >
-                {t("common.next", "Next")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Cache Details Dialog */}
       <Dialog open={showCacheDialog} onOpenChange={setShowCacheDialog}>

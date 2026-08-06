@@ -2,12 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { AlertCircle, Check, CheckCircle2, ChevronDown, MoreHorizontal, Trash2, X, Zap } from "lucide-react"
+import { AlertCircle, Check, CheckCircle2, ChevronDown, MoreHorizontal, Trash2, X } from "lucide-react"
 import { message } from "@/workflow/ideart/shims/antd"
 import { ColorfulLoader } from "@/workflow/ideart/components/ui/colorful-loader"
 import { preloadModels, type DynamicModel } from "@/workflow/ideart/lib/hooks/useModels"
 import { extractLibTvProviderKeyFromRuntimeId, resolveLibTvProviderRuntimeModelId } from "@/workflow/ideart/lib/libtv/provider-runtime"
-import { estimateImageGenerationPoints, formatBillingPoints } from "@/workflow/ideart/lib/models/billing-estimate"
 import { buildImagePreviewUrl } from "@/workflow/ideart/lib/url/image-preview"
 import { uploadCanvasNodeFile } from "../../libtv-upload-utils"
 import {
@@ -1213,7 +1212,6 @@ function ScriptV2BatchAssetModal({
   const selectedQuality = qualityChoices.find((item) => item.value === quality)
   const selectedTargets = targets.filter((asset) => asset.selected)
   const allSelected = targets.length > 0 && selectedTargets.length === targets.length
-  const generationCost = estimateImageGenerationPoints(selectedModel, Math.max(1, selectedTargets.length), selectedResolution?.value || selectedResolution?.label || imageSize, selectedQuality?.value || quality || undefined).totalPoints
 
   const updateTarget = (id: string, patch: Partial<ScriptV2BatchAssetTarget>) => {
     setTargets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item))
@@ -1372,10 +1370,6 @@ function ScriptV2BatchAssetModal({
             ) : null}
             <div data-testid="batch-asset-footer-right" className="flex shrink-0 items-center gap-2">
               {status ? <span className="max-w-[180px] truncate text-xs text-white/55">{status}</span> : null}
-              <span data-testid="generation-points-budget" className="flex items-center gap-1 text-xs text-white/65">
-                <Zap className="size-3.5 fill-current" />
-                <span>{formatBillingPoints(generationCost)}</span>
-              </span>
               <button
                 type="button"
                 className="flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#F7F7F7] px-3 text-[13px] font-normal text-[#171717] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
@@ -1550,10 +1544,6 @@ function ScriptV2AssetModal({
   const selectedResolution = resolutionChoices.find((item) => item.value === imageSize)
   const selectedRatio = ratioChoices.find((item) => item.value === aspectRatio)
   const selectedQuality = qualityChoices.find((item) => item.value === quality)
-  const generationCost = useMemo(() => {
-    return estimateImageGenerationPoints(selectedModel, 1, selectedResolution?.value || selectedResolution?.label || imageSize, selectedQuality?.value || quality || undefined).totalPoints
-  }, [imageSize, quality, selectedModel, selectedQuality?.value, selectedResolution])
-
   const runAiGeneration = useCallback(async () => {
     const finalPrompt = prompt.trim()
     if (!finalPrompt || generating) return
@@ -1870,10 +1860,6 @@ function ScriptV2AssetModal({
                     {ratioChoices.length > 0 ? renderConfigChip("ratio", selectedRatio?.label || aspectRatio || "比例", ratioChoices, setAspectRatio, "ai-generate-config-chip-ratio", aspectRatio) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="flex items-center gap-1 text-[12px] font-medium text-white/72">
-                      <Zap className="size-3.5 fill-[#FFD15C] text-[#FFD15C]" />
-                      {formatBillingPoints(generationCost)}
-                    </span>
                     <button
                       type="button"
                       className="flex h-8 min-w-[82px] cursor-pointer items-center justify-center rounded-lg bg-white px-4 text-xs font-medium text-neutral-900 transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30"

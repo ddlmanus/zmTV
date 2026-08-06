@@ -42,7 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-type SortKey = "popularity" | "name" | "price";
+type SortKey = "popularity" | "name";
 
 function getModelShortName(modelId: string): string {
   const parts = modelId.split("/");
@@ -140,11 +140,6 @@ const ModelCard = memo(function ModelCard({
           )}
         </div>
         <div className="flex items-center justify-between mt-auto">
-          {model.base_price !== undefined && (
-            <span className="text-xs font-semibold text-primary">
-              ${model.base_price.toFixed(4)}
-            </span>
-          )}
           <div className="flex gap-0.5 ml-auto">
             {mobile ? (
               <TouchTooltip>
@@ -172,11 +167,6 @@ const ModelCard = memo(function ModelCard({
                     {model.type && (
                       <p className="text-[10px] opacity-80">
                         {t("models.type")}: {model.type}
-                      </p>
-                    )}
-                    {model.base_price !== undefined && (
-                      <p className="text-[10px] opacity-80">
-                        {t("models.basePrice")}: ${model.base_price.toFixed(4)}
                       </p>
                     )}
                   </div>
@@ -213,16 +203,6 @@ const ModelCard = memo(function ModelCard({
                         <Badge variant="secondary" className="text-xs">
                           {model.type}
                         </Badge>
-                      </div>
-                    )}
-                    {model.base_price !== undefined && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">
-                          {t("models.basePrice")}:
-                        </span>
-                        <span className="font-medium text-primary">
-                          ${model.base_price.toFixed(4)}
-                        </span>
                       </div>
                     )}
                   </div>
@@ -353,7 +333,6 @@ export function ExplorePanel({
         return getModelShortName(a.model_id).localeCompare(
           getModelShortName(b.model_id),
         );
-      if (sortKey === "price") return (a.base_price ?? 0) - (b.base_price ?? 0);
       return (a.sort_order ?? 9999) - (b.sort_order ?? 9999);
     });
     return sortAsc ? sorted : sorted.reverse();
@@ -438,7 +417,6 @@ export function ExplorePanel({
   const sortLabels: Record<SortKey, string> = {
     popularity: t("models.popularity", "Popularity"),
     name: t("models.name", "Name"),
-    price: t("models.price", "Price"),
   };
 
   return (

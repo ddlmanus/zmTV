@@ -52,15 +52,6 @@ export function roundBillingPoints(value: number, digits = BILLING_AMOUNT_DECIMA
   return Math.round(value * factor) / factor
 }
 
-export function formatBillingPoints(value: number | null | undefined): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--"
-  const rounded = roundBillingPoints(Math.max(0, value))
-  const amount = Number.isInteger(rounded)
-    ? String(rounded)
-    : rounded.toFixed(2).replace(/\.?0+$/, "")
-  return `$${amount}`
-}
-
 export function normalizeBillingResolutionKey(value: unknown): string {
   const normalized = String(value ?? "").trim().toLowerCase()
   if (!normalized) return ""

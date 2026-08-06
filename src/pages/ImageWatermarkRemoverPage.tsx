@@ -14,7 +14,6 @@ import { useApiKeyStore } from "@/stores/apiKeyStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { detectAssetType, useAssetsStore } from "@/stores/assetsStore";
-import { applyDiscount, getModelDiscountRate } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { Model, SchemaProperty } from "@/types/model";
 import {
@@ -148,11 +147,6 @@ function extractOutputUrl(
   return null;
 }
 
-function formatPrice(value?: number) {
-  if (typeof value !== "number") return null;
-  return value < 0.01 ? value.toFixed(4) : value.toFixed(3);
-}
-
 const savedWatermarkPredictionIds = new Set<string>();
 
 function autoSaveWatermarkOutputs(
@@ -258,14 +252,6 @@ export function ImageWatermarkRemoverPage() {
 
   const resolvedModel = useMemo(() => resolveWatermarkModel(models), [models]);
   const modelId = WATERMARK_REMOVER_MODEL_ID;
-  const price = useMemo(() => {
-    if (typeof resolvedModel?.base_price !== "number") return null;
-    return applyDiscount(
-      resolvedModel.base_price,
-      getModelDiscountRate(resolvedModel),
-    );
-  }, [resolvedModel]);
-  const displayPrice = formatPrice(price?.discountedPrice);
   const imageHistoryTab = useMemo(() => {
     const imageTabs = tabs.filter((tab) => tab.workspace === "image");
     return (
@@ -607,9 +593,6 @@ export function ImageWatermarkRemoverPage() {
                 <Sparkles className="h-4 w-4" />
               )}
               <span>{t("freeTools.watermarkRemover.generate")}</span>
-              {displayPrice && (
-                <span className="font-bold">${displayPrice}</span>
-              )}
             </button>
             <button
               type="button"
@@ -619,14 +602,6 @@ export function ImageWatermarkRemoverPage() {
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--playground-sidebar-muted))]">
-              {t("freeTools.watermarkRemover.credits")}
-            </span>
-            <span className="font-medium text-white/80">
-              {displayPrice ? `$${displayPrice}` : "-"}
-            </span>
           </div>
         </div>
       </aside>

@@ -24,11 +24,6 @@ import {
   X,
 } from "lucide-react";
 import type { LibTvWorkflowNode } from "@/workflow/ideart/lib/libtv/workflow";
-import {
-  estimateImageGenerationPoints,
-  formatBillingPoints,
-} from "@/workflow/ideart/lib/models/billing-estimate";
-import { estimateVideoGenerationPoints } from "@/workflow/ideart/lib/models/video-billing-estimate";
 import { useApimartVoiceInput } from "@/workflow/ideart/lib/hooks/use-apimart-voice-input";
 import {
   WorkflowExtraParametersPanel,
@@ -126,7 +121,6 @@ import {
   MicrophoneIcon,
   PresetToggleIcon,
   SparkleModelIcon,
-  SparklesTokenIcon,
   StyleReferenceIcon,
   WorkflowPromptOptimizeDialogCloseIcon,
   WorkflowPromptOptimizeDialogCopyIcon,
@@ -154,7 +148,6 @@ import type {
   WorkflowRedrawChoice,
 } from "./surface-contracts";
 import type { WorkflowVideoInputCounts } from "./generation-options";
-import { useWorkflowDynamicPricing } from "./use-workflow-dynamic-pricing";
 
 export function NodeGenerationBar({
   kind,
@@ -863,46 +856,6 @@ export function NodeGenerationBar({
       : kind === "image"
         ? imageSettingParts.join(" · ") || "自动"
         : "自动";
-  const billedCount = hasSelectionCount
-    ? safeSelectedItemCount
-    : selectedCountNumber;
-  const endpointBasePrice = Number(activeEndpointConfig?.basePrice);
-  const pricingModel =
-    selectedModel && Number.isFinite(endpointBasePrice)
-      ? { ...selectedModel, cost: endpointBasePrice }
-      : selectedModel;
-  const fallbackTokenCost =
-    kind === "video"
-      ? estimateVideoGenerationPoints(
-          pricingModel,
-          selectedVideoDuration,
-          billedCount,
-          selectedVideoResolution,
-        ).totalPoints
-      : kind === "image"
-        ? estimateImageGenerationPoints(
-            pricingModel,
-            billedCount,
-            selectedImageSize || selectedSizeLabel,
-            selectedImageQuality || undefined,
-          ).totalPoints
-        : 1;
-  const { price: tokenCost } = useWorkflowDynamicPricing({
-    enabled: isImageNode || isVideoNode,
-    endpointId: String(activeEndpointConfig?.endpointId || ""),
-    prompt: draftPrompt,
-    aspectRatio: selectedAspectRatio,
-    resolution: isVideoNode
-      ? selectedVideoResolution
-      : selectedImageSize || selectedSizeLabel,
-    duration: isVideoNode ? selectedVideoDuration : undefined,
-    quantity: billedCount,
-    generateAudio: isVideoNode ? selectedGenerateAudio : undefined,
-    enableWebSearch: selectedWebSearchEnabled,
-    extra: resolvedWorkflowExtraParameters,
-    fallbackPrice: fallbackTokenCost,
-  });
-  const tokenCostLabel = formatBillingPoints(tokenCost);
   const generateDisabled =
     generationSubmitting ||
     !canGenerate ||
@@ -2858,12 +2811,6 @@ export function NodeGenerationBar({
                       )}
                     </button>
                     <div className="flex h-8 items-center gap-2 text-fg-muted">
-                      <span className="flex shrink-0 items-center gap-[2px]">
-                        <SparklesTokenIcon />
-                        <span className="min-w-5 text-center text-[12px] font-normal leading-[15px] tabular-nums">
-                          {tokenCostLabel}
-                        </span>
-                      </span>
                       <button
                         type="button"
                         disabled={generateDisabled}
@@ -3043,12 +2990,6 @@ export function NodeGenerationBar({
                       )}
                     </button>
                     <div className="flex h-8 items-center gap-2 text-fg-muted">
-                      <span className="flex shrink-0 items-center gap-[2px]">
-                        <SparklesTokenIcon />
-                        <span className="min-w-5 text-center text-[12px] font-normal leading-[15px] tabular-nums">
-                          {tokenCostLabel}
-                        </span>
-                      </span>
                       <button
                         type="button"
                         disabled={generateDisabled}
@@ -4021,14 +3962,6 @@ export function NodeGenerationBar({
                           }
                     }
                   >
-                    <div
-                      className={`${isVideoNode || isImageNode ? "flex items-center gap-[2px] text-xs font-normal text-fg-muted" : "flex items-center pl-1 text-sm font-medium text-white/[0.9]"}`}
-                    >
-                      <SparklesTokenIcon />
-                      <span className="inline-flex min-w-6 justify-center text-[12px] tabular-nums">
-                        {tokenCostLabel}
-                      </span>
-                    </div>
                     <button
                       type="button"
                       disabled={generateDisabled}

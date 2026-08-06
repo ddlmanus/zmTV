@@ -23,10 +23,6 @@ import {
   resolveImageDownloadUrl,
   triggerBrowserDownload,
 } from "@/workflow/ideart/lib/url/download-url";
-import {
-  estimateFixedGenerationPoints,
-  formatBillingPoints,
-} from "@/workflow/ideart/lib/models/billing-estimate";
 import { WorkflowAudioGenerationPlaceholder } from "./nodes/workflow-node-placeholders";
 import { WorkflowAnchoredPopover } from "./workflow-anchored-popover";
 import { TapNowNodeIcon } from "./nodes/workflow-node-icons";
@@ -61,11 +57,7 @@ import {
   normalizeWorkflowRedrawChoicesForMethod,
   pickWorkflowRedrawDefault,
 } from "./generation-options";
-import {
-  AdaptiveAudioIcon,
-  ExpandCornersIcon,
-  SparklesTokenIcon,
-} from "./workflow-icons";
+import { AdaptiveAudioIcon, ExpandCornersIcon } from "./workflow-icons";
 import { ModelPopupList, WorkflowModelIcon } from "./generation-popovers";
 import type {
   WorkflowModelOption,
@@ -704,11 +696,6 @@ export function AudioGenerationBar({
   const selectedAudioDuration =
     audioDurationOptions.find((option) => option.value === audioDuration) ||
     audioDurationOptions[0];
-  const tokenCostLabel = formatBillingPoints(
-    selectedModel
-      ? estimateFixedGenerationPoints(selectedModel, 1).totalPoints
-      : null,
-  );
   const canGenerate = Boolean(selectedModelValue) && prompt.trim().length > 0;
 
   useEffect(() => {
@@ -1120,12 +1107,6 @@ export function AudioGenerationBar({
                 background: "var(--workflow-token-pill-background)",
               }}
             >
-              <div className="flex items-center pl-1 text-sm font-medium text-fg-default">
-                <SparklesTokenIcon />
-                <span className="inline-flex min-w-6 justify-center text-[12px] tabular-nums">
-                  {tokenCostLabel}
-                </span>
-              </div>
               <button
                 type="button"
                 disabled={!canGenerate}

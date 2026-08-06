@@ -557,7 +557,7 @@ export function ThreeDWorldOverlay({
                                                 <span className="shrink-0 select-none text-[14px] font-semibold leading-none tracking-[0.01em] text-white/88">第二步：更新世界</span>
                                             </div>
                                             <div className="flex shrink-0 items-center gap-1.5 pr-[1px]">
-                                                <ThreeDPriceSubmit price={160} disabled={submittingSceneEdit} loading={submittingSceneEdit} onClick={submitSceneEdit} ariaLabel="生成新 3D 世界" />
+                                                <ThreeDSubmit disabled={submittingSceneEdit} loading={submittingSceneEdit} onClick={submitSceneEdit} ariaLabel="生成新 3D 世界" />
                                             </div>
                                         </div>
                                     </div>
@@ -609,7 +609,7 @@ export function ThreeDWorldOverlay({
                                         {hasSceneRegion ? "按当前视角修改标注区域" : "将修改整张全景图"}
                                     </span>
                                     <div className="shrink-0">
-                                        <ThreeDPriceSubmit price={hasSceneRegion ? 15 : 26} disabled={submittingSceneEdit || (!scenePrompt.trim() && !hasSceneRegion)} loading={submittingSceneEdit} onClick={submitSceneEdit} ariaLabel="Generate" />
+                                        <ThreeDSubmit disabled={submittingSceneEdit || (!scenePrompt.trim() && !hasSceneRegion)} loading={submittingSceneEdit} onClick={submitSceneEdit} ariaLabel="Generate" />
                                     </div>
                                 </div>
                             </div>
@@ -749,41 +749,23 @@ function ThreeDFocalLengthRuler() {
     )
 }
 
-function ThreeDPriceSubmit({
-    price,
+function ThreeDSubmit({
     disabled,
     loading,
     onClick,
     ariaLabel,
 }: {
-    price: number
     disabled?: boolean
     loading?: boolean
     onClick?: () => void
     ariaLabel: string
 }) {
     return (
-        <div className="flex items-center gap-1 rounded-full border border-white/10 p-1" style={{ backdropFilter: "blur(10px)", background: "rgba(255, 255, 255, 0.1)" }}>
-            <div className="box-border flex items-center pl-1 text-sm font-medium text-[#CCCCCC]">
-                <TapPriceIcon />
-                <span className="relative inline-flex min-w-6 justify-center tabular-nums text-[12px]">
-                    <span className="inline-flex w-full justify-center whitespace-nowrap">${price}</span>
-                </span>
-            </div>
+        <div className="flex items-center rounded-full border border-white/10 p-1" style={{ backdropFilter: "blur(10px)", background: "rgba(255, 255, 255, 0.1)" }}>
             <button type="button" disabled={disabled} className="flex aspect-square h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-white text-sm font-medium text-black transition-all hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-50" aria-label={ariaLabel} onClick={onClick}>
                 {loading ? <ColorfulLoader className="size-4" thickness={2} /> : <ArrowUp className="size-4" />}
             </button>
         </div>
-    )
-}
-
-function TapPriceIcon() {
-    return (
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ stroke: "rgb(204, 204, 204)" }} aria-hidden="true">
-            <path d="M11.2077 11.0832C13.7219 11.0832 15.7601 9.04507 15.7601 6.53088C15.7601 4.01668 13.7219 1.97852 11.2077 1.97852C8.6935 1.97852 6.65533 4.01668 6.65533 6.53088C6.65533 9.04507 8.6935 11.0832 11.2077 11.0832Z" strokeWidth="2" />
-            <path d="M2.05883 7.07063C2.40649 5.06634 4.30083 3.70985 6.31403 4.03225C8.31238 4.35169 9.68225 6.2074 9.41481 8.20129C9.41481 8.34911 9.51357 8.81255 9.57973 9.03629C9.77436 9.69448 10.1844 10.6335 11.015 11.721C12.2615 13.3554 11.948 15.691 10.3152 16.9375C8.68085 18.1841 6.34524 17.8721 5.09869 16.2378C2.41541 12.7239 1.71413 9.22201 2.0514 7.11817L2.05883 7.07063Z" strokeWidth="2" />
-            <path d="M8.52786 8.98262L7.26662 12.7829C6.82516 14.1131 7.54561 15.5493 8.87578 15.9907L12.6761 17.252C14.0062 17.6934 15.4424 16.973 15.8839 15.6428L17.1451 11.8425C17.5866 10.5124 16.8662 9.07616 15.536 8.6347L11.7357 7.37346C10.4055 6.932 8.96932 7.65244 8.52786 8.98262Z" strokeWidth="2" />
-        </svg>
     )
 }
 

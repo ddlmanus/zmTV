@@ -25,7 +25,6 @@ import { useApiServiceStore } from "@/stores/apiServiceStore";
 import { usePageActive } from "@/hooks/usePageActive";
 import { getDefaultValues, type FormFieldConfig } from "@/lib/schemaToForm";
 import {
-  buildNormalizedModelInput,
   extractModelFormFields,
   filterValuesForModelFields,
 } from "@/lib/modelSchemaRuntime";
@@ -41,11 +40,6 @@ import {
   findCuratedGeneratorProduct,
   isCuratedGeneratorModel,
 } from "@/lib/curatedGeneratorCatalog";
-import {
-  applyDiscount,
-  getModelDiscountRate,
-  type PriceDisplay,
-} from "@/lib/pricing";
 import { DynamicForm } from "@/components/playground/DynamicForm";
 import { ModelSelector } from "@/components/playground/ModelSelector";
 import { BatchControls } from "@/components/playground/BatchControls";
@@ -1007,7 +1001,7 @@ function tune3DFields(
     },
     hd_texture: {
       label: "高清纹理",
-      description: "生成更高分辨率纹理，通常耗时和成本更高。",
+      description: "生成更高分辨率纹理，通常需要更长处理时间。",
     },
     is_micro: {
       label: "微型模型",
@@ -1031,7 +1025,7 @@ function tune3DFields(
     },
     geometry_quality: {
       label: "几何质量",
-      description: "控制模型几何细节，详细模式会增加生成成本和耗时。",
+      description: "控制模型几何细节，详细模式通常需要更长处理时间。",
     },
     texture_quality: {
       label: "纹理质量",
@@ -1707,12 +1701,7 @@ function getPreferredWorkspaceModel(
 interface PlaygroundPageProps {
   workspace?: PlaygroundWorkspace;
   routeBase?:
-    | "/playground"
-    | "/image"
-    | "/video"
-    | "/avatar"
-    | "/audio"
-    | "/3d";
+    "/playground" | "/image" | "/video" | "/avatar" | "/audio" | "/3d";
 }
 
 function decodeModelIdFromPath(pathname: string, basePath: string) {
@@ -1768,7 +1757,6 @@ export function PlaygroundPage({
   const apiBaseUrl = useApiServiceStore((state) => state.baseUrl);
   const apiServiceId = useApiServiceStore((state) => state.serviceId);
   const {
-    apiKey,
     isLoading: isLoadingApiKey,
     isValidated,
     loadApiKey,
@@ -1940,19 +1928,9 @@ export function PlaygroundPage({
     }
   }, [workspaceTabs, activeTabId, activeTab, setActiveTab]);
 
-  // Dynamic pricing state
-  const [calculatedPrice, setCalculatedPrice] = useState<PriceDisplay | null>(
-    null,
-  );
-  const [calculatedPriceKey, setCalculatedPriceKey] = useState<string | null>(
-    null,
-  );
-  const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [smartToggleOverrides, setSmartToggleOverrides] = useState<
     Record<string, Record<string, string>>
   >({});
-  const pricingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pricingModelRef = useRef<string | null>(null);
 
   const activeSmartFamily = useMemo(() => {
     if (workspace === "video") {
@@ -2023,25 +2001,6 @@ export function PlaygroundPage({
     smartFilledFields,
     smartVariantModels,
   ]);
-
-  const currentPricingKey = useMemo(
-    () =>
-      JSON.stringify({
-        modelId:
-          smartResolvedModel?.model_id ??
-          activeTab?.selectedModel?.model_id ??
-          null,
-        values: activeTab?.formValues ?? null,
-        smart: activeSmartFamily ? (activeSmartToggleValues ?? null) : null,
-      }),
-    [
-      activeSmartFamily,
-      activeSmartToggleValues,
-      activeTab?.selectedModel?.model_id,
-      activeTab?.formValues,
-      smartResolvedModel?.model_id,
-    ],
-  );
 
   const smartVisibleFields = useMemo(() => {
     if (!activeSmartFamily || smartVariantModels.length === 0) return undefined;
@@ -2127,14 +2086,6 @@ export function PlaygroundPage({
         : activeTab.formValues;
     return filterValuesForModelFields(mappedValues, runFields);
   }, [activeSmartFamily, activeTab, runFields, runModel]);
-
-  const buildRunPricingInput = useCallback(() => {
-    if (!activeTab) return null;
-    return buildNormalizedModelInput(
-      { ...getDefaultValues(runFields), ...runFormValues },
-      runFields,
-    );
-  }, [activeTab, runFields, runFormValues]);
 
   // Mobile view state: 'config' or 'output'
   const [mobileView, setMobileView] = useState<"config" | "output">("config");
@@ -2370,83 +2321,6 @@ export function PlaygroundPage({
     activeTab?.outputs,
     activeTab?.isRunning,
     savePredictionInputs,
-  ]);
-
-  // Calculate dynamic pricing with debounce — deferred start
-  useEffect(() => {
-    if (!activeTab?.selectedModel || !apiKey) {
-      setCalculatedPrice(null);
-      setCalculatedPriceKey(null);
-      setIsPricingLoading(false);
-      pricingModelRef.current = null;
-      return;
-    }
-
-    if (pricingTimeoutRef.current) {
-      clearTimeout(pricingTimeoutRef.current);
-    }
-
-    const selectedModel = runModel;
-    if (!selectedModel) return;
-    const selectedModelId = selectedModel.model_id;
-    const modelChanged = pricingModelRef.current !== selectedModelId;
-    pricingModelRef.current = selectedModelId;
-
-    setCalculatedPrice(null);
-    setCalculatedPriceKey(currentPricingKey);
-    setIsPricingLoading(true);
-    const requestPricingKey = currentPricingKey;
-
-    let cancelled = false;
-    const delay = modelChanged ? 0 : 500;
-
-    pricingTimeoutRef.current = setTimeout(async () => {
-      setIsPricingLoading(true);
-      try {
-        const price = await apiClient.calculatePricing(
-          selectedModelId,
-          buildNormalizedModelInput(
-            { ...getDefaultValues(runFields), ...runFormValues },
-            runFields,
-          ),
-        );
-        if (cancelled) return;
-
-        const discountRate =
-          price.discountRate ?? getModelDiscountRate(selectedModel);
-        setCalculatedPrice({
-          price: price.price,
-          discountedPrice:
-            price.discountedPrice !== price.price
-              ? price.discountedPrice
-              : applyDiscount(price.price, discountRate).discountedPrice,
-          discountRate,
-        });
-        setCalculatedPriceKey(requestPricingKey);
-      } catch {
-        if (cancelled) return;
-        setCalculatedPrice(null);
-        setCalculatedPriceKey(requestPricingKey);
-      } finally {
-        if (cancelled) return;
-        setIsPricingLoading(false);
-      }
-    }, delay);
-
-    return () => {
-      cancelled = true;
-      if (pricingTimeoutRef.current) {
-        clearTimeout(pricingTimeoutRef.current);
-      }
-    };
-  }, [
-    activeTab?.selectedModel,
-    activeTab?.formValues,
-    apiKey,
-    runFields,
-    runFormValues,
-    runModel,
-    currentPricingKey,
   ]);
 
   // Load template from URL query param
@@ -2711,72 +2585,6 @@ export function PlaygroundPage({
     [setFormValue, activeTabId],
   );
 
-  const ensureSufficientBalanceForRun = useCallback(async () => {
-    if (!activeTab?.selectedModel || !runModel) return false;
-    const modelForRun = runModel;
-    if (modelForRun.model_id !== activeTab.selectedModel.model_id) {
-      setSelectedModelPreservingForm(modelForRun);
-    }
-
-    const pricingInput = buildRunPricingInput();
-    if (!pricingInput) return false;
-
-    const repeatCount =
-      activeTab.batchConfig.enabled && activeTab.batchConfig.repeatCount > 1
-        ? activeTab.batchConfig.repeatCount
-        : 1;
-
-    setIsPricingLoading(true);
-    try {
-      const price = await apiClient.calculatePricing(
-        modelForRun.model_id,
-        pricingInput,
-      );
-      const discountRate =
-        price.discountRate ?? getModelDiscountRate(modelForRun);
-      const nextPrice = {
-        price: price.price,
-        discountedPrice:
-          price.discountedPrice !== price.price
-            ? price.discountedPrice
-            : applyDiscount(price.price, discountRate).discountedPrice,
-        discountRate,
-      };
-      setCalculatedPrice(nextPrice);
-      setCalculatedPriceKey(currentPricingKey);
-
-      const requiredBalance = nextPrice.discountedPrice * repeatCount;
-      const balance = await apiClient.getBalance();
-      if (balance + 0.0001 < requiredBalance) {
-        toast({
-          title: "余额不足",
-          description: `当前余额 $${balance.toFixed(4)}，本次预计需要 $${requiredBalance.toFixed(4)}，请充值后再运行。`,
-          variant: "destructive",
-        });
-        return false;
-      }
-      return true;
-    } catch (error) {
-      // Price estimation is advisory. Usage-based/token billing and providers
-      // without a calculable pre-run price must still be allowed to submit.
-      console.info(
-        "[PlaygroundPage] Skipping advisory balance check:",
-        error instanceof Error ? error.message : "pricing unavailable",
-      );
-      setCalculatedPrice(null);
-      setCalculatedPriceKey(currentPricingKey);
-      return true;
-    } finally {
-      setIsPricingLoading(false);
-    }
-  }, [
-    activeTab,
-    buildRunPricingInput,
-    currentPricingKey,
-    runModel,
-    setSelectedModelPreservingForm,
-  ]);
-
   const handleSetDefaults = useCallback(
     (defaults: Record<string, unknown>) => {
       const pending = consumePendingFormValues();
@@ -2824,8 +2632,10 @@ export function PlaygroundPage({
     if (!activeTab) return;
     const hasValidApiKey = await requestApiKey();
     if (!hasValidApiKey) return;
-    const canRun = await ensureSufficientBalanceForRun();
-    if (!canRun) return;
+
+    if (runModel && activeTab.selectedModel?.model_id !== runModel.model_id) {
+      setSelectedModelPreservingForm(runModel);
+    }
 
     // Switch to output view on mobile when running
     setMobileView("output");
@@ -2847,10 +2657,10 @@ export function PlaygroundPage({
   }, [
     activeTab,
     requestApiKey,
-    ensureSufficientBalanceForRun,
     runFields,
     runFormValues,
     runModel,
+    setSelectedModelPreservingForm,
     switchTab,
     runBatch,
     runPrediction,
@@ -3056,9 +2866,6 @@ export function PlaygroundPage({
     );
   }
 
-  const activePrice =
-    calculatedPriceKey === currentPricingKey ? calculatedPrice : null;
-
   return (
     <div className="playground-dark flex h-full flex-col md:pt-0">
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -3242,13 +3049,6 @@ export function PlaygroundPage({
                     isUploading={(activeTab?.uploadingCount ?? 0) > 0}
                     onRun={handleRun}
                     runLabel={t("playground.run")}
-                    price={
-                      activePrice != null
-                        ? activePrice
-                        : isPricingLoading
-                          ? "..."
-                          : undefined
-                    }
                   />
                 </div>
                 <button

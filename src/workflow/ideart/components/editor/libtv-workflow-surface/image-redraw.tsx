@@ -8,7 +8,6 @@ import React, {
   useState,
 } from "react";
 import { Check, Settings2 } from "lucide-react";
-import { estimateImageGenerationPoints } from "@/workflow/ideart/lib/models/billing-estimate";
 import { WorkflowExtraParametersPanel } from "./workflow-extra-parameters";
 import {
   getWorkflowImageToolModelValue,
@@ -18,7 +17,6 @@ import {
   preventWorkflowNodeChromeContextMenu,
   stopWorkflowNodeChromeEvent,
 } from "./nodes/workflow-node-utils";
-import { SparklesTokenIcon } from "./workflow-icons";
 import { CANVAS_CONTROLS_MENU_PANEL_STYLE } from "./surface-contracts";
 import {
   drawWorkflowRedrawPreview,
@@ -177,12 +175,6 @@ export function WorkflowRedrawAspectIcon() {
         strokeWidth="1.2"
       />
     </svg>
-  );
-}
-
-export function WorkflowRedrawLightningIcon() {
-  return (
-    <SparklesTokenIcon className="h-[14px] w-[10px] shrink-0 text-white/52" />
   );
 }
 
@@ -425,12 +417,6 @@ export function WorkflowImageRedrawOverlay({
     1,
     Number.parseInt(imageSettings.count || "1", 10) || 1,
   );
-  const totalCost = estimateImageGenerationPoints(
-    imageSettings.selectedModel,
-    selectedCount,
-    imageSettings.resolution || selectedSizeLabel,
-    imageSettings.quality || selectedQualityLabel,
-  ).totalPoints;
   const hasAdvancedParameters =
     imageSettings.supportsWebSearch ||
     imageSettings.advancedDefinitions.length > 0;
@@ -1043,12 +1029,6 @@ export function WorkflowImageRedrawOverlay({
               ) : null}
             </div>
             <div className="flex h-8 min-w-16 items-center gap-2 text-white/52">
-              <span className="flex shrink-0 items-center gap-[2px]">
-                <WorkflowRedrawLightningIcon />
-                <span className="min-w-[13px] text-center text-[12px] font-normal leading-[15px]">
-                  {totalCost}
-                </span>
-              </span>
               <button
                 type="button"
                 className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white text-black shadow-sm transition-[filter,opacity] hover:brightness-110 active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"

@@ -23,7 +23,6 @@ import { useApiKeyStore } from "@/stores/apiKeyStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { detectAssetType, useAssetsStore } from "@/stores/assetsStore";
-import { applyDiscount, getModelDiscountRate } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "@/types/prediction";
 import {
@@ -40,11 +39,6 @@ type OutputFormat = "jpeg" | "png" | "webp";
 type ImageField = "target" | "reference";
 
 const FACE_SWAP_MODEL_ID = "wavespeed-ai/image-face-swap";
-
-function formatPrice(value?: number) {
-  if (typeof value !== "number") return null;
-  return value < 0.01 ? value.toFixed(4) : value.toFixed(3);
-}
 
 function extractOutputUrl(
   output: string | Record<string, unknown> | undefined,
@@ -180,18 +174,6 @@ export function FaceSwapperPage() {
     };
   }, [referencePreview, targetPreview]);
 
-  const faceSwapModel = useMemo(
-    () => models.find((model) => model.model_id === FACE_SWAP_MODEL_ID),
-    [models],
-  );
-  const price = useMemo(() => {
-    if (typeof faceSwapModel?.base_price !== "number") return null;
-    return applyDiscount(
-      faceSwapModel.base_price,
-      getModelDiscountRate(faceSwapModel),
-    );
-  }, [faceSwapModel]);
-  const displayPrice = formatPrice(price?.discountedPrice);
   const imageHistoryTab = useMemo(() => {
     const imageTabs = tabs.filter((tab) => tab.workspace === "image");
     return (
@@ -586,9 +568,6 @@ export function FaceSwapperPage() {
                 <Sparkles className="h-4 w-4" />
               )}
               <span>{t("freeTools.faceSwapper.generate")}</span>
-              {displayPrice && (
-                <span className="font-bold">${displayPrice}</span>
-              )}
             </button>
             <button
               type="button"
@@ -598,14 +577,6 @@ export function FaceSwapperPage() {
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--playground-sidebar-muted))]">
-              {t("freeTools.faceSwapper.credits")}
-            </span>
-            <span className="font-medium text-white/80">
-              {displayPrice ? `$${displayPrice}` : "-"}
-            </span>
           </div>
         </div>
       </aside>

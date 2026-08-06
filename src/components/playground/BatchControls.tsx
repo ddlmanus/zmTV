@@ -9,16 +9,14 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Play, ChevronDown, Loader2 } from "lucide-react";
+import { Play, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PriceDisplay } from "@/lib/pricing";
 
 interface BatchControlsProps {
   disabled?: boolean;
   isUploading?: boolean;
   onRun: () => void;
   runLabel: string;
-  price?: string | PriceDisplay;
 }
 
 export function BatchControls({
@@ -26,7 +24,6 @@ export function BatchControls({
   isUploading,
   onRun,
   runLabel,
-  price,
 }: BatchControlsProps) {
   const { t } = useTranslation();
   const { getActiveTab, setBatchConfig } = usePlaygroundStore();
@@ -52,46 +49,6 @@ export function BatchControls({
   const displayLabel =
     enabled && repeatCount > 1 ? `${runLabel} (${repeatCount})` : runLabel;
 
-  const priceMultiplier = enabled && repeatCount > 1 ? repeatCount : 1;
-  const formatPrice = (value: number) => value.toFixed(4);
-  const renderPrice = () => {
-    if (!price) return null;
-
-    if (typeof price === "string") {
-      if (price === "...") {
-        return <Loader2 className="ml-1.5 h-3 w-3 animate-spin opacity-80" />;
-      }
-      const numeric = Number(price.replace(/^\$/, ""));
-      const display = Number.isFinite(numeric)
-        ? formatPrice(numeric * priceMultiplier)
-        : price;
-      return <span className="ml-1.5 text-xs opacity-80">${display}</span>;
-    }
-
-    const original = price.price * priceMultiplier;
-    const discounted = price.discountedPrice * priceMultiplier;
-    const hasDiscount = discounted > 0 && discounted < original;
-
-    if (!hasDiscount) {
-      return (
-        <span className="ml-1.5 text-xs opacity-80">
-          ${formatPrice(original)}
-        </span>
-      );
-    }
-
-    return (
-      <span className="ml-1.5 inline-flex items-baseline gap-1.5 text-xs">
-        <span className="line-through opacity-55">
-          ${formatPrice(original)}
-        </span>
-        <span className="font-semibold opacity-95">
-          ${formatPrice(discounted)}
-        </span>
-      </span>
-    );
-  };
-
   return (
     <div className="flex rounded-lg border border-transparent shadow-sm">
       {/* Main Run Button */}
@@ -106,7 +63,6 @@ export function BatchControls({
       >
         <Play className="mr-2 h-4 w-4" />
         {displayLabel}
-        {renderPrice()}
       </Button>
 
       {/* Dropdown Trigger */}

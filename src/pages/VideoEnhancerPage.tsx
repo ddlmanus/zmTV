@@ -23,7 +23,6 @@ import { useApiKeyStore } from "@/stores/apiKeyStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { detectAssetType, useAssetsStore } from "@/stores/assetsStore";
-import { applyDiscount, getModelDiscountRate } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { HistoryItem } from "@/types/prediction";
 import {
@@ -57,19 +56,6 @@ function extractOutputUrl(
     if (typeof value === "string" && value.trim()) return value;
   }
   return null;
-}
-
-function formatPrice(value?: number) {
-  if (typeof value !== "number") return null;
-  return value < 0.01 ? value.toFixed(4) : value.toFixed(3);
-}
-
-function formatBalance(value: number | null) {
-  if (typeof value !== "number") return null;
-  return value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  });
 }
 
 const savedFlashVsrPredictionIds = new Set<string>();
@@ -124,7 +110,7 @@ export function VideoEnhancerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
-  const { apiKey, isValidated, requestApiKey } = useApiKeyStore();
+  const { isValidated, requestApiKey } = useApiKeyStore();
   const { models, fetchModels } = useModelsStore();
   const {
     tabs,
@@ -158,8 +144,6 @@ export function VideoEnhancerPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -177,19 +161,6 @@ export function VideoEnhancerPage() {
       if (localPreview?.startsWith("blob:")) URL.revokeObjectURL(localPreview);
     };
   }, [localPreview]);
-
-  const flashVsrModel = useMemo(
-    () => models.find((model) => model.model_id === FLASHVSR_MODEL_ID),
-    [models],
-  );
-  const price = useMemo(() => {
-    if (typeof flashVsrModel?.base_price !== "number") return null;
-    return applyDiscount(
-      flashVsrModel.base_price,
-      getModelDiscountRate(flashVsrModel),
-    );
-  }, [flashVsrModel]);
-  const displayPrice = formatPrice(price?.discountedPrice);
 
   const videoHistoryTab = useMemo(() => {
     const videoTabs = tabs.filter((tab) => tab.workspace === "video");
@@ -229,30 +200,6 @@ export function VideoEnhancerPage() {
   }, [fetchMyGenerations, isValidated]);
 
   const isBusy = isUploading || isGenerating;
-  const displayBalance = formatBalance(balance);
-
-  const fetchBalance = useCallback(async () => {
-    if (!apiKey || !isValidated) {
-      setBalance(null);
-      return;
-    }
-
-    setIsBalanceLoading(true);
-    try {
-      const currentBalance = await apiClient.getBalance();
-      setBalance(currentBalance);
-    } catch (err) {
-      console.warn("[flashvsr] failed to load account balance", err);
-      setBalance(null);
-    } finally {
-      setIsBalanceLoading(false);
-    }
-  }, [apiKey, isValidated]);
-
-  useEffect(() => {
-    void fetchBalance();
-  }, [fetchBalance]);
-
   const handleBack = useCallback(() => {
     if (isBusy) return;
     resetPage(location.pathname);
@@ -366,7 +313,6 @@ export function VideoEnhancerPage() {
         formValues: formValuesForHistory,
       });
       autoSaveFlashVsrOutputs(outputs, prediction.id);
-      void fetchBalance();
       void fetchMyGenerations();
     } catch (err) {
       const message =
@@ -379,12 +325,9 @@ export function VideoEnhancerPage() {
       setIsGenerating(false);
     }
   }, [
-    apiKey,
     completeExternalGeneration,
     failExternalGeneration,
-    fetchBalance,
     fetchMyGenerations,
-    isValidated,
     requestApiKey,
     startExternalGeneration,
     t,
@@ -560,9 +503,6 @@ export function VideoEnhancerPage() {
                 <Sparkles className="h-4 w-4" />
               )}
               <span>{t("freeTools.videoEnhancer.generate")}</span>
-              {displayPrice && (
-                <span className="font-bold">${displayPrice}</span>
-              )}
             </button>
             <button
               type="button"
@@ -572,18 +512,6 @@ export function VideoEnhancerPage() {
             >
               <ChevronDown className="h-4 w-4" />
             </button>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[hsl(var(--playground-sidebar-muted))]">
-              {t("freeTools.videoEnhancer.balance")}
-            </span>
-            <span className="font-medium text-white/80">
-              {isBalanceLoading
-                ? t("common.loading", "Loading...")
-                : displayBalance
-                  ? `$${displayBalance}`
-                  : "-"}
-            </span>
           </div>
         </div>
       </aside>

@@ -5143,6 +5143,10 @@ export function CodexSupportWidget({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (scope === "workflow") {
+      setLauncherPosition(null);
+      return;
+    }
     try {
       const saved = window.localStorage.getItem(launcherStorageKey);
       const parsed = saved
@@ -5156,10 +5160,15 @@ export function CodexSupportWidget({
       }
     } catch {}
     setLauncherPosition(defaultLauncherPosition());
-  }, [clampLauncherPosition, defaultLauncherPosition, launcherStorageKey]);
+  }, [
+    clampLauncherPosition,
+    defaultLauncherPosition,
+    launcherStorageKey,
+    scope,
+  ]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || scope === "workflow") return;
     const handleResize = () => {
       setLauncherPosition((previous) => {
         const next = clampLauncherPosition(
@@ -5173,7 +5182,12 @@ export function CodexSupportWidget({
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [clampLauncherPosition, defaultLauncherPosition, launcherStorageKey]);
+  }, [
+    clampLauncherPosition,
+    defaultLauncherPosition,
+    launcherStorageKey,
+    scope,
+  ]);
 
   useEffect(() => {
     if (!open) return;
@@ -6285,7 +6299,12 @@ export function CodexSupportWidget({
       launcherGreetingWidth + LAUNCHER_MARGIN + launcherGreetingGap,
   );
   const launcherGreetingStyle = (() => {
-    if (!launcherPosition || typeof window === "undefined") return undefined;
+    if (
+      scope === "workflow" ||
+      !launcherPosition ||
+      typeof window === "undefined"
+    )
+      return undefined;
     const dimensions = launcherDimensions();
     const left = launcherGreetingOnRight
       ? Math.min(
@@ -6321,7 +6340,7 @@ export function CodexSupportWidget({
       : "bottom-[calc(35px+env(safe-area-inset-bottom))] right-[104px] max-sm:bottom-[calc(27px+env(safe-area-inset-bottom))] max-sm:right-[92px]";
   const launcherButtonClassName =
     launcherIcon === "director"
-      ? `fixed z-[240] inline-flex h-10 w-[126px] cursor-grab items-center justify-center rounded-[14px] border border-white/10 bg-[#202020]/94 p-1 text-[#E4E9F0] shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl transition-[transform,background-color,border-color] hover:scale-[1.02] hover:border-white/18 hover:bg-[#2B2B2B] active:scale-[0.99] active:cursor-grabbing max-sm:h-[38px] max-sm:w-[116px] max-sm:rounded-[13px] ${launcherPosition ? "" : "right-6 top-5 max-sm:right-5 max-sm:top-4"}`
+      ? `absolute right-6 top-5 z-[240] inline-flex h-10 w-[126px] cursor-pointer items-center justify-center rounded-[14px] border border-white/10 bg-[#202020]/94 p-1 text-[#E4E9F0] shadow-[0_10px_30px_rgba(0,0,0,0.24)] backdrop-blur-xl transition-[transform,background-color,border-color] hover:scale-[1.02] hover:border-white/18 hover:bg-[#2B2B2B] active:scale-[0.99] max-sm:right-5 max-sm:top-4 max-sm:h-[38px] max-sm:w-[116px] max-sm:rounded-[13px]`
       : `fixed z-[240] h-[72px] w-[72px] cursor-grab overflow-hidden rounded-full border-2 border-white bg-white shadow-[0_12px_34px_rgba(0,0,0,0.26)] transition-transform hover:scale-[1.04] active:scale-[0.98] active:cursor-grabbing max-sm:h-16 max-sm:w-16 ${launcherPosition ? "" : "bottom-[calc(20px+env(safe-area-inset-bottom))] right-5 max-sm:bottom-[calc(16px+env(safe-area-inset-bottom))] max-sm:right-4"}`;
 
   return (
@@ -6330,7 +6349,7 @@ export function CodexSupportWidget({
         <div
           className={
             scope === "workflow"
-              ? "pointer-events-none fixed inset-y-0 right-0 z-[260]"
+              ? "pointer-events-none relative h-full flex-shrink-0 overflow-hidden"
               : "pointer-events-none fixed inset-0 z-[260]"
           }
         >
@@ -6349,7 +6368,7 @@ export function CodexSupportWidget({
             onClick={(event) => event.stopPropagation()}
             onWheel={(event) => event.stopPropagation()}
             onContextMenu={(event) => event.stopPropagation()}
-            className={`zaomeng-codex-native zaomeng-codex-window ${scope === "workflow" ? "zaomeng-codex-inline-panel pointer-events-auto relative h-full" : "zaomeng-codex-docked pointer-events-auto absolute bottom-0 right-0 top-0"} flex max-sm:w-full ${activePluginApp ? (scope === "workflow" ? "w-[min(760px,48vw)] flex-row max-sm:fixed max-sm:inset-0 max-sm:z-[260] max-sm:w-full max-sm:flex-col" : "w-[min(1180px,calc(100vw-16px))] flex-row max-sm:flex-col") : scope === "workflow" ? "w-[420px] flex-col max-sm:fixed max-sm:inset-0 max-sm:z-[260] max-sm:w-full" : "w-[min(420px,calc(100vw-16px))] flex-col"}`}
+            className={`zaomeng-codex-native zaomeng-codex-window ${scope === "workflow" ? "zaomeng-codex-inline-panel pointer-events-auto relative h-full" : "zaomeng-codex-docked pointer-events-auto absolute bottom-0 right-0 top-0"} flex max-sm:w-full ${activePluginApp ? (scope === "workflow" ? "w-[min(760px,48vw)] flex-row max-sm:fixed max-sm:inset-0 max-sm:z-[260] max-sm:w-full max-sm:flex-col" : "w-[min(1180px,calc(100vw-16px))] flex-row max-sm:flex-col") : scope === "workflow" ? "w-[400px] flex-col max-sm:fixed max-sm:inset-0 max-sm:z-[260] max-sm:w-full" : "w-[min(420px,calc(100vw-16px))] flex-col"}`}
           >
             {activePluginApp && activePluginFrameSrc ? (
               <aside className="zaomeng-codex-plugin-panel relative flex min-w-0 flex-1 flex-col overflow-hidden border-r border-[var(--color-token-border-light)] bg-[#f7f8f9] max-sm:h-[42dvh] max-sm:flex-none max-sm:border-b max-sm:border-r-0">
@@ -6371,7 +6390,9 @@ export function CodexSupportWidget({
                 />
               </aside>
             ) : null}
-            <div className="zaomeng-codex-chat-pane relative flex h-full min-h-0 w-[min(420px,calc(100vw-16px))] shrink-0 flex-col max-sm:min-h-0 max-sm:w-full max-sm:flex-1">
+            <div
+              className={`zaomeng-codex-chat-pane relative flex h-full min-h-0 shrink-0 flex-col max-sm:min-h-0 max-sm:w-full max-sm:flex-1 ${scope === "workflow" ? "w-[400px]" : "w-[min(420px,calc(100vw-16px))]"}`}
+            >
               <header className="zaomeng-codex-header">
                 <div
                   className="zaomeng-codex-header-tabs"
@@ -6931,8 +6952,8 @@ export function CodexSupportWidget({
                     disabled={initializing || sending}
                     placeholder={
                       taskRunning
-                        ? "输入新需求可打断当前回复"
-                        : "描述你想做的内容"
+                        ? "输入新需求，继续当前创作"
+                        : "输入你的创作需求..."
                     }
                     className="max-h-[130px] min-h-[54px] min-w-0 w-full resize-none bg-transparent px-1 py-1 text-[14px] leading-5 text-[var(--color-token-foreground)] outline-none placeholder:text-[var(--color-token-input-placeholder-foreground)] disabled:cursor-not-allowed"
                   />
@@ -7013,7 +7034,7 @@ export function CodexSupportWidget({
         </div>
       ) : (
         <>
-          {showLauncherGreeting ? (
+          {scope !== "workflow" && showLauncherGreeting ? (
             <div
               aria-hidden="true"
               style={launcherGreetingStyle}
@@ -7030,13 +7051,21 @@ export function CodexSupportWidget({
             aria-label={agentLabel}
             title={agentLabel}
             onClick={handleOpen}
-            onPointerDown={handleLauncherPointerDown}
-            onPointerMove={handleLauncherPointerMove}
-            onPointerUp={handleLauncherPointerEnd}
-            onPointerCancel={handleLauncherPointerEnd}
+            onPointerDown={
+              scope === "workflow" ? undefined : handleLauncherPointerDown
+            }
+            onPointerMove={
+              scope === "workflow" ? undefined : handleLauncherPointerMove
+            }
+            onPointerUp={
+              scope === "workflow" ? undefined : handleLauncherPointerEnd
+            }
+            onPointerCancel={
+              scope === "workflow" ? undefined : handleLauncherPointerEnd
+            }
             onDragStart={(event) => event.preventDefault()}
             style={
-              launcherPosition
+              scope !== "workflow" && launcherPosition
                 ? {
                     left: launcherPosition.x,
                     top: launcherPosition.y,

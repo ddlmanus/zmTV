@@ -54,10 +54,6 @@ import {
 } from "../utils/video-proxy";
 import { hasRecoverableWorkflowVideoGenerationTask } from "@/workflow/ideart/lib/libtv/workflow";
 import {
-  estimateImageGenerationPoints,
-  formatBillingPoints,
-} from "@/workflow/ideart/lib/models/billing-estimate";
-import {
   WorkflowImageGenerationPlaceholder,
   WorkflowImageLoadingSweep,
   WorkflowVideoGenerationPlaceholder,
@@ -844,13 +840,6 @@ export function WorkflowEmotionAdjustPanel({
   const selectedCountLabel =
     countOptions.find((item) => item.value === selectedCountValue)?.label ||
     `${selectedCountNumber}张`;
-  const tokenCostLabel = formatBillingPoints(
-    estimateImageGenerationPoints(
-      selectedModel,
-      selectedCountNumber,
-      selectedImageSize,
-    ).totalPoints,
-  );
   const updatePointFromEvent = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const rect = event.currentTarget.getBoundingClientRect();
@@ -1149,26 +1138,6 @@ export function WorkflowEmotionAdjustPanel({
                 </button>
               ) : null}
               <div className="flex h-8 items-center gap-2 text-fg-muted [&_button]:size-8 [&_button_svg]:size-4">
-                <span className="flex shrink-0 items-center gap-[2px]">
-                  <svg
-                    aria-hidden="true"
-                    role="img"
-                    className="pointer-events-none h-[14px] w-[10px] text-fg-muted"
-                    width="1em"
-                    height="1em"
-                    viewBox="0 0 16 16"
-                  >
-                    <g transform="translate(2.2857 0) scale(0.933347)">
-                      <path
-                        d="M6.79577 0.652118C7.72979 -0.427779 8.49498 -0.136386 8.49498 1.30348V7.47438H11.0956C12.2734 7.47448 12.6016 8.21128 11.8192 9.1111L5.44909 16.491C4.51536 17.5703 3.74914 17.2787 3.74889 15.8396V9.66872H1.14928C-0.0287394 9.66872 -0.356821 8.9309 0.425648 8.03102L6.79577 0.652118Z"
-                        fill="currentColor"
-                      />
-                    </g>
-                  </svg>
-                  <span className="min-w-5 text-center text-[12px] font-normal leading-[15px] text-fg-muted">
-                    {tokenCostLabel}
-                  </span>
-                </span>
                 <button
                   type="button"
                   disabled={!selectedModelValue}

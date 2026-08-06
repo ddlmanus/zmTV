@@ -18,10 +18,6 @@ import {
   X,
 } from "lucide-react";
 import type { LibTvWorkflowNode } from "@/workflow/ideart/lib/libtv/workflow";
-import {
-  formatBillingPoints,
-  isFreeBillingModel,
-} from "@/workflow/ideart/lib/models/billing-estimate";
 import { WorkflowThreeDGenerationPlaceholder } from "./nodes/workflow-node-placeholders";
 import {
   WorkflowExtraParametersPanel,
@@ -61,7 +57,6 @@ import {
   ExpandCornersIcon,
   MarbleModelIcon,
   MicrophoneIcon,
-  SparklesTokenIcon,
 } from "./workflow-icons";
 import { ModelPopupList, WorkflowModelIcon } from "./generation-popovers";
 import type {
@@ -541,16 +536,6 @@ export function ThreeDGenerationBar({
       ),
     [threeDParameterDefinitions, workflowExtraParameters],
   );
-  const selectedModelCost = selectedModel
-    ? isFreeBillingModel(selectedModel)
-      ? 0
-      : Number(selectedModel.cost)
-    : null;
-  const tokenCostLabel = formatBillingPoints(
-    typeof selectedModelCost === "number" && Number.isFinite(selectedModelCost)
-      ? selectedModelCost
-      : null,
-  );
   const canGenerate =
     Boolean(selectedModelValue) &&
     (draftPrompt.trim().length > 0 || Boolean(hasReferenceInput)) &&
@@ -923,12 +908,6 @@ export function ThreeDGenerationBar({
                 background: "var(--workflow-token-pill-background)",
               }}
             >
-              <div className="flex items-center pl-1 text-sm font-medium text-fg-default">
-                <SparklesTokenIcon />
-                <span className="inline-flex min-w-6 justify-center text-[12px] tabular-nums">
-                  {tokenCostLabel}
-                </span>
-              </div>
               <button
                 type="button"
                 disabled={!canGenerate}
