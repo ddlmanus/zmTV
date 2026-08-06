@@ -115,6 +115,7 @@ export function areWorkflowFlowNodeDataEqual(
   return (
     currentData.interactive === nextData.interactive &&
     currentData.isDragging === nextData.isDragging &&
+    currentData.isViewportMoving === nextData.isViewportMoving &&
     currentData.nodeEventsSuppressed === nextData.nodeEventsSuppressed &&
     currentData.suppressFloatingControls ===
       nextData.suppressFloatingControls &&

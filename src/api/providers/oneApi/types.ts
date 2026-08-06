@@ -14,8 +14,10 @@ export type OneApiMediaKind = "image" | "video" | "audio" | "text";
 export interface OneApiExecutionRoute {
   kind: OneApiExecutionKind;
   submitPath: string;
+  statusPath?: string;
   endpointType?: string;
   mediaKind?: OneApiMediaKind;
+  payloadFormat?: "json" | "multipart";
 }
 
 export interface OneApiPricingEntry {

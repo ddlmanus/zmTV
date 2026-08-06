@@ -108,6 +108,14 @@ interface OutputDisplayProps {
   error: string | null;
   isLoading: boolean;
   modelId?: string;
+  outputMediaType?:
+    | "image"
+    | "video"
+    | "audio"
+    | "3d"
+    | "avatar"
+    | "text"
+    | "file";
   /** Total number of history items (for fullscreen prev/next across generations) */
   historyLength?: number;
   /** Navigate to prev/next history generation from fullscreen */
@@ -122,6 +130,7 @@ export function OutputDisplay({
   error,
   isLoading,
   modelId,
+  outputMediaType,
   historyLength,
   onNavigateHistory,
   idleFallback,
@@ -145,19 +154,31 @@ export function OutputDisplay({
   const { settings, loadSettings, saveAsset, hasAssetForPrediction } =
     useAssetsStore();
 
+  const forcedMediaType =
+    outputMediaType === "avatar" ? "video" : outputMediaType;
+
   // Build list of media outputs for fullscreen navigation
   const mediaOutputs = useMemo(() => {
     return outputs
       .map((output, index) => {
         const str = extractOutputUrl(output);
         if (!str) return null;
+        if (forcedMediaType === "image") {
+          return { index, url: str, type: "image" as const };
+        }
+        if (forcedMediaType === "video") {
+          return { index, url: str, type: "video" as const };
+        }
+        if (forcedMediaType === "3d") {
+          return { index, url: str, type: "3d" as const };
+        }
         if (isImageUrl(str)) return { index, url: str, type: "image" as const };
         if (isVideoUrl(str)) return { index, url: str, type: "video" as const };
         if (is3DUrl(str)) return { index, url: str, type: "3d" as const };
         return null;
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [outputs]);
+  }, [forcedMediaType, outputs]);
 
   const fullscreenMedia =
     fullscreenIndex !== null
@@ -575,10 +596,18 @@ export function OutputDisplay({
             outputUrl ||
             (isObject ? JSON.stringify(output, null, 2) : String(output));
           const isMediaObject = !!outputUrl;
-          const isImage = isImageUrl(outputStr);
-          const isVideo = isVideoUrl(outputStr);
-          const isAudio = isAudioUrl(outputStr);
-          const is3D = is3DUrl(outputStr);
+          const isImage =
+            forcedMediaType === "image" ||
+            (!forcedMediaType && isImageUrl(outputStr));
+          const isVideo =
+            forcedMediaType === "video" ||
+            (!forcedMediaType && isVideoUrl(outputStr));
+          const isAudio =
+            forcedMediaType === "audio" ||
+            (!forcedMediaType && isAudioUrl(outputStr));
+          const is3D =
+            forcedMediaType === "3d" ||
+            (!forcedMediaType && is3DUrl(outputStr));
           const copyValue = isObject ? outputStr : outputStr;
 
           // Multi-output: BatchOutputGrid-style card with thumbnail + footer

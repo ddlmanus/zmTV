@@ -4,6 +4,10 @@ import {
   resolveApiServiceIdForBaseUrl,
 } from "@/api/client";
 import { getStoredApiKeyForService } from "@/stores/apiKeyStore";
+import {
+  recordGenerationHistoryFromPrediction,
+  type GenerationHistoryMediaType,
+} from "@/stores/generationHistoryStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import type { Model } from "@/types/model";
 import type { PredictionResult } from "@/types/prediction";
@@ -52,6 +56,16 @@ function normalizeWorkflowBaseUrl(value: unknown) {
   return String(value || "")
     .trim()
     .replace(/\/+$/, "");
+}
+
+function workflowHistoryMediaType(value: unknown): GenerationHistoryMediaType {
+  const category = String(value || "").toLowerCase();
+  if (category.includes("digital")) return "avatar";
+  if (category.includes("video")) return "video";
+  if (category.includes("audio")) return "audio";
+  if (category.includes("3d")) return "3d";
+  if (category.includes("image")) return "image";
+  return "file";
 }
 
 async function createWorkflowPredictionClient(baseUrl?: string) {
@@ -357,6 +371,14 @@ export async function runWorkflowPrediction(
     endpointId: endpointRequest.endpointId,
     mode: route.mode,
   });
+  recordGenerationHistoryFromPrediction(result, {
+    model: endpointRequest.endpointId,
+    inputs: endpointRequest.input,
+    source: "workflow",
+    providerBaseUrl: execution.baseUrl,
+    providerKey: resolveApiServiceIdForBaseUrl(execution.baseUrl) || undefined,
+    mediaType: workflowHistoryMediaType(family.category),
+  });
   return {
     id: String(result.id || results[0]?.id || ""),
     baseUrl: execution.baseUrl,
@@ -407,6 +429,14 @@ export async function resumeWorkflowPredictionTasks(
     }
   }
   if (urls.length === 0) throw new Error("任务完成但未返回输出");
+  for (const result of results) {
+    recordGenerationHistoryFromPrediction(result, {
+      model: result.model,
+      source: "workflow",
+      providerBaseUrl: execution.baseUrl,
+      providerKey: resolveApiServiceIdForBaseUrl(execution.baseUrl) || undefined,
+    });
+  }
   return { ids, baseUrl: execution.baseUrl, urls, results };
 }
 

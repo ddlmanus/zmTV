@@ -1,4 +1,4 @@
-import type { Model, SchemaProperty } from "@/types/model";
+import type { Model, ModelSchema, SchemaProperty } from "@/types/model";
 
 export interface FormFieldConfig {
   name: string;
@@ -11,6 +11,7 @@ export interface FormFieldConfig {
     | "select"
     | "multi-select"
     | "object-array"
+    | "object"
     | "string-array"
     | "file"
     | "file-array"
@@ -33,6 +34,8 @@ export interface FormFieldConfig {
   wrapKey?: string;
   /** For object-array: sub-field definitions for each item in the array */
   itemFields?: FormFieldConfig[];
+  /** For object: nested field definitions */
+  objectFields?: FormFieldConfig[];
 }
 
 export function validateFormValues(
@@ -47,7 +50,8 @@ export function validateFormValues(
       value === undefined ||
       value === null ||
       value === "" ||
-      (Array.isArray(value) && value.length === 0);
+      (Array.isArray(value) && value.length === 0) ||
+      (value && typeof value === "object" && !Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0);
 
     if (field.required && isEmpty) {
       errors[field.name] = `请填写${field.label}`;
@@ -66,6 +70,20 @@ export function validateFormValues(
         errors[field.name] = `${field.label}不能小于 ${field.min}`;
       } else if (field.max !== undefined && num > field.max) {
         errors[field.name] = `${field.label}不能大于 ${field.max}`;
+      }
+    }
+
+    if (field.type === "object") {
+      const objectValue = value as Record<string, unknown>;
+      if (!objectValue || typeof objectValue !== "object" || Array.isArray(objectValue)) {
+        errors[field.name] = `${field.label}必须是对象`;
+        continue;
+      }
+      if (field.objectFields?.length) {
+        const nested = validateFormValues(field.objectFields, objectValue);
+        for (const [key, nestedError] of Object.entries(nested)) {
+          errors[`${field.name}.${key}`] = nestedError;
+        }
       }
     }
 
@@ -130,7 +148,12 @@ const TEXTAREA_FIELDS = [
 ];
 
 // Fields to hide from the form (internal API options)
-const HIDDEN_FIELDS = ["enable_base64_output", "enable_sync_mode"];
+const HIDDEN_FIELDS = [
+  "enable_base64_output",
+  "enable_sync_mode",
+  "model",
+  "pricing_key",
+];
 
 export function schemaToFormFields(
   properties: Record<string, SchemaProperty>,
@@ -186,6 +209,10 @@ function propertyToField(
     description: localizeFieldDescription(name, prop.description),
     hidden: !!prop["x-hidden"],
   };
+
+  if (name.toLowerCase() === "mode" && prop.enum?.length === 1) {
+    return null;
+  }
 
   // Handle x-ui-component: uploader (single file) / uploaders (multi-file)
   if (
@@ -261,6 +288,17 @@ function propertyToField(
         max: prop.maxItems,
       };
     }
+  }
+
+  if (prop.type === "object" && prop.properties) {
+    const itemProps = prop.properties as Record<string, SchemaProperty>;
+    const orderProps = (prop["x-order-properties"] as string[]) || [];
+    const subFields = schemaToFormFields(itemProps, prop.required || [], orderProps);
+    return {
+      ...baseField,
+      type: "object",
+      objectFields: subFields,
+    };
   }
 
   // Handle array type (could be file array)
@@ -400,7 +438,7 @@ const FIELD_LABELS: Record<string, string> = {
   image: "图像",
   images: "图像",
   image_url: "图像",
-  image_urls: "图像",
+  image_urls: "参考图像",
   input_image: "输入图像",
   input_images: "输入图像",
   reference_image: "参考图像",
@@ -421,8 +459,10 @@ const FIELD_LABELS: Record<string, string> = {
   mask_image_urls: "蒙版图像",
   video: "视频",
   video_url: "视频",
+  video_urls: "参考视频",
   audio: "音频",
   audio_url: "音频",
+  audio_urls: "参考音频",
   first_frame_image: "首帧图像",
   last_frame_image: "尾帧图像",
   last_image: "末帧图像",
@@ -580,6 +620,8 @@ export function getDefaultValues(
       defaults[field.name] = [];
     } else if (field.type === "object-array") {
       defaults[field.name] = [];
+    } else if (field.type === "object") {
+      defaults[field.name] = getDefaultValues(field.objectFields || []);
     }
   }
 
@@ -822,25 +864,53 @@ export function getAudioArrayFromValues(
   return getMediaArrayFromValues(values, "audio");
 }
 
+type RequestSchemaCarrier = {
+  type?: string;
+  request_schema?: ModelSchema;
+};
+
+function schemaHasProperties(schema: unknown): schema is ModelSchema {
+  return Boolean(
+    schema &&
+    typeof schema === "object" &&
+    (schema as ModelSchema).properties &&
+    typeof (schema as ModelSchema).properties === "object",
+  );
+}
+
+export function getRequestSchemaFromModel(model: Model): ModelSchema | null {
+  const apiSchema = model.api_schema as
+    | (Record<string, unknown> & {
+        api_schemas?: RequestSchemaCarrier[];
+        api_endpoints?: RequestSchemaCarrier[];
+      })
+    | undefined;
+  const schemaEntries = [
+    ...(Array.isArray(apiSchema?.api_schemas) ? apiSchema.api_schemas : []),
+    ...(Array.isArray(apiSchema?.api_endpoints) ? apiSchema.api_endpoints : []),
+    ...(Array.isArray(model.api_endpoints) ? model.api_endpoints : []),
+  ];
+  const exact = schemaEntries.find(
+    (entry) =>
+      String(entry.type || "").toLowerCase() === "model_run" &&
+      schemaHasProperties(entry.request_schema),
+  )?.request_schema;
+  if (exact) return exact;
+
+  const firstEndpointSchema = schemaEntries.find((entry) =>
+    schemaHasProperties(entry.request_schema),
+  )?.request_schema;
+  if (firstEndpointSchema) return firstEndpointSchema;
+
+  const componentSchema = model.api_schema?.components?.schemas?.Request;
+  return schemaHasProperties(componentSchema) ? componentSchema : null;
+}
+
 /** Extract form fields from a Desktop API Model using the same logic as the Playground (DynamicForm). */
 export function getFormFieldsFromModel(model: Model): FormFieldConfig[] {
-  const apiSchemas = (model.api_schema as Record<string, unknown> | undefined)
-    ?.api_schemas as
-    | Array<{
-        type: string;
-        request_schema?: {
-          properties?: Record<string, SchemaProperty>;
-          required?: string[];
-          "x-order-properties"?: string[];
-        };
-      }>
-    | undefined;
-  const requestSchema = apiSchemas?.find(
-    (s) => s.type === "model_run",
-  )?.request_schema;
-  if (!requestSchema?.properties) {
-    return [];
-  }
+  const requestSchema = getRequestSchemaFromModel(model);
+  if (!requestSchema) return [];
+
   return schemaToFormFields(
     requestSchema.properties,
     requestSchema.required ?? [],

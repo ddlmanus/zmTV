@@ -2,8 +2,8 @@ import { Fragment, useMemo, useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { Model } from "@/types/model";
 import {
-  schemaToFormFields,
   getDefaultValues,
+  getFormFieldsFromModel,
   getSingleImageFromValues,
   type FormFieldConfig,
 } from "@/lib/schemaToForm";
@@ -229,33 +229,7 @@ export function DynamicForm({
 
   // Extract schema from model
   const extractedFields = useMemo<FormFieldConfig[]>(() => {
-    // The API returns schema in api_schema.api_schemas[0].request_schema
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const apiSchemas = (model.api_schema as any)?.api_schemas as
-      | Array<{
-          type: string;
-          request_schema?: {
-            properties?: Record<string, unknown>;
-            required?: string[];
-            "x-order-properties"?: string[];
-          };
-        }>
-      | undefined;
-
-    const requestSchema = apiSchemas?.find(
-      (s) => s.type === "model_run",
-    )?.request_schema;
-    if (!requestSchema?.properties) {
-      return [];
-    }
-    return schemaToFormFields(
-      requestSchema.properties as Record<
-        string,
-        import("@/types/model").SchemaProperty
-      >,
-      requestSchema.required || [],
-      requestSchema["x-order-properties"],
-    );
+    return getFormFieldsFromModel(model);
   }, [model]);
   const fields = fieldsOverride ?? extractedFields;
 

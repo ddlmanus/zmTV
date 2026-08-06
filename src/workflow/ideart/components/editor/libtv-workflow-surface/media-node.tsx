@@ -1538,7 +1538,7 @@ export function TapNowMediaNode({
             dragging={dragging}
             onUpdateNode={onUpdateNode}
           />
-        ) : isVideoGeneratorNode && generationRunning && mediaUrl ? (
+        ) : isVideoGeneratorNode && generationRunning && mediaUrl && !dragging ? (
           <div className="absolute inset-0 overflow-hidden rounded-2xl">
             <div className="absolute inset-0 scale-[1.1] blur-[24px]">
               <OrdinaryVideoPlayer
@@ -1814,7 +1814,7 @@ export function TapNowMediaNode({
           }}
         />
       ) : null}
-      {showFloatingControls && isVideoUpscaleNode ? (
+      {showFloatingControls && !dragging && isVideoUpscaleNode ? (
         <WorkflowVideoUpscalePanel
           node={node}
           onUpdateNode={onUpdateNode}
@@ -1822,6 +1822,7 @@ export function TapNowMediaNode({
         />
       ) : null}
       {showFloatingControls &&
+      !dragging &&
       isImageUpscaleNode &&
       !node.data?.suppressGenerationBar ? (
         <WorkflowImageUpscaleGenerationBar
@@ -1833,6 +1834,7 @@ export function TapNowMediaNode({
         />
       ) : null}
       {showFloatingControls &&
+      !dragging &&
       !isOrdinaryMediaNode &&
       !isVideoUpscaleNode &&
       !isImageUpscaleNode &&

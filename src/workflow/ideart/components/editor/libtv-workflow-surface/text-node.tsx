@@ -589,6 +589,7 @@ export function TapNowTextNode({
   node,
   selected,
   showFloatingControls,
+  dragging,
   onUpdateNode,
   onReferenceFilesUploaded,
   onReferenceNodeRemoved,
@@ -892,6 +893,7 @@ export function TapNowTextNode({
       </div>
 
       {showFloatingControls &&
+      !dragging &&
       !isTextEditor &&
       !node.data?.suppressGenerationBar ? (
         <NodeGenerationBar

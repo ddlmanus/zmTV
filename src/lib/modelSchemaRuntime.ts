@@ -1,18 +1,13 @@
 import type { Model, ModelSchema } from "@/types/model";
 import {
+  getRequestSchemaFromModel,
   normalizePayloadArrays,
   schemaToFormFields,
   type FormFieldConfig,
 } from "@/lib/schemaToForm";
 
 export function getModelRequestSchema(model: Model): ModelSchema | null {
-  const schemas = model.api_schema?.api_schemas;
-  const requestSchema = schemas?.find(
-    (schema) => String(schema.type || "").toLowerCase() === "model_run",
-  )?.request_schema;
-
-  if (!requestSchema?.properties) return null;
-  return requestSchema;
+  return getRequestSchemaFromModel(model);
 }
 
 export function extractModelFormFields(model: Model): FormFieldConfig[] {
@@ -54,6 +49,7 @@ export function buildNormalizedModelInput(
       value === "" ||
       value === undefined ||
       value === null ||
+      isEmptyObject(value) ||
       (Array.isArray(value) && value.length === 0)
     ) {
       continue;
@@ -66,4 +62,17 @@ export function buildNormalizedModelInput(
   }
 
   return normalizePayloadArrays(input, fields);
+}
+function isEmptyObject(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length === 0) return true;
+  return keys.every((key) => {
+    const item = record[key];
+    if (item === "" || item === undefined || item === null) return true;
+    if (Array.isArray(item)) return item.length === 0;
+    if (typeof item === "object") return isEmptyObject(item);
+    return false;
+  });
 }

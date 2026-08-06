@@ -14,6 +14,7 @@ import {
   persistPlaygroundSession,
   hydratePlaygroundSession,
   getModelWorkspace,
+  isTextOnlyModel,
   type PlaygroundWorkspace,
 } from "@/stores/playgroundStore";
 import { useModelsStore } from "@/stores/modelsStore";
@@ -173,17 +174,17 @@ function getVideoFamilyKey(modelId: string): string {
   const family = parts[1] || "";
   const id = modelId.toLowerCase();
 
+  if (isSeedance20ModelId(modelId)) {
+    if (provider === "bytedance") return "bytedance/seedance-2.0";
+    if (id.includes("doubao-seedance")) return "doubao-seedance-2.0";
+    return family ? `${provider}/seedance-2.0` : "seedance-2.0";
+  }
+
   if (parts.length >= 3) {
     return `${provider}/${family}`;
   }
 
   if (provider === "bytedance") {
-    if (
-      id.startsWith("bytedance/seedance-2.0") ||
-      id.startsWith("bytedance/seedance-v2")
-    ) {
-      return "bytedance/seedance-2.0";
-    }
     if (id.startsWith("bytedance/seedance-v1.5-pro")) {
       return "bytedance/seedance-v1.5-pro";
     }
@@ -211,6 +212,18 @@ function getVideoFamilyKey(modelId: string): string {
   }
 
   return `${provider}/${family.replace(/-fast$/i, "")}`;
+}
+
+function isSeedance20ModelId(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  if (!id.includes("seedance")) return false;
+  return (
+    id.includes("2.0") ||
+    id.includes("2-0") ||
+    id.includes("v2.0") ||
+    id.includes("v2-0") ||
+    id.includes("v2/")
+  );
 }
 
 type AudioModeDefinition = {
@@ -466,11 +479,6 @@ type VideoModeDefinition = {
   rank: number;
 };
 
-function hasAnyFieldName(fields: FormFieldConfig[], names: string[]) {
-  const fieldNames = new Set(fields.map((field) => field.name.toLowerCase()));
-  return names.some((name) => fieldNames.has(name));
-}
-
 function hasRequiredFieldName(fields: FormFieldConfig[], names: string[]) {
   const requiredFieldNames = new Set(
     fields
@@ -545,7 +553,7 @@ function getVideoModeDefinition(model: Model): VideoModeDefinition {
     modelType.includes("image-to-video") ||
     id.includes("image-to-video") ||
     id.includes("/i2v") ||
-    hasAnyFieldName(fields, ["image", "image_url", "images", "image_urls"])
+    hasRequiredFieldName(fields, ["image", "image_url", "images", "image_urls"])
   ) {
     mode = "image";
     modeLabelKey = "smartPlayground.modeImageToVideo";
@@ -602,6 +610,83 @@ function getVideoModeDefinition(model: Model): VideoModeDefinition {
   };
 }
 
+function getSchemaModeLabelKey(value: string): string {
+  const normalized = value.toLowerCase();
+  if (normalized === "std" || normalized === "standard") {
+    return "smartPlayground.qualityStd";
+  }
+  if (normalized === "pro") return "smartPlayground.qualityPro";
+  if (normalized === "4k") return "smartPlayground.quality4k";
+  if (normalized === "fast") return "smartPlayground.speedFast";
+  if (normalized === "turbo") return "smartPlayground.speedTurbo";
+  if (normalized === "text" || normalized === "text-to-video") {
+    return "smartPlayground.modeTextToVideo";
+  }
+  if (
+    normalized === "image" ||
+    normalized === "input" ||
+    normalized === "media" ||
+    normalized === "image-to-video"
+  ) {
+    return "smartPlayground.modeImageToVideo";
+  }
+  if (normalized === "video" || normalized === "video-to-video") {
+    return "smartPlayground.modeVideoToVideo";
+  }
+  return `smartPlayground.schemaMode.${value}`;
+}
+
+function buildSchemaModeSmartFamily(
+  selectedModel: Model,
+): SmartFormFamily | undefined {
+  const modeField = extractModelFormFields(selectedModel).find(
+    (field) =>
+      field.name.toLowerCase() === "mode" &&
+      field.type === "select" &&
+      (field.options?.length ?? 0) > 1,
+  );
+  if (!modeField?.options?.length) return undefined;
+
+  const defaultMode =
+    modeField.default === undefined || modeField.default === null
+      ? String(modeField.options[0])
+      : String(modeField.default);
+
+  return {
+    id: `video-schema-mode:${selectedModel.model_id}`,
+    name: selectedModel.name || selectedModel.model_id,
+    provider: selectedModel.model_id.split("/")[0] || "video",
+    poster: "",
+    category: "video",
+    variantIds: [selectedModel.model_id],
+    primaryVariant: selectedModel.model_id,
+    excludeFields: [modeField.name],
+    toggles: [
+      {
+        key: modeField.name,
+        labelKey: "smartPlayground.toggleMode",
+        options: modeField.options.map((option) => {
+          const value = String(option);
+          return {
+            value,
+            labelKey: getSchemaModeLabelKey(value),
+          };
+        }),
+        default: defaultMode,
+      },
+    ],
+    resolveVariant() {
+      return selectedModel.model_id;
+    },
+    mapValues(values, _resolvedVariantId, toggleValues) {
+      return {
+        ...values,
+        [modeField.name]: toggleValues?.[modeField.name] ?? defaultMode,
+      };
+    },
+  };
+}
+
 function buildDynamicVideoSmartFamily(
   models: Model[],
   selectedModel?: Model | null,
@@ -611,7 +696,9 @@ function buildDynamicVideoSmartFamily(
   const familyModels = models.filter(
     (model) => getVideoFamilyKey(model.model_id) === familyKey,
   );
-  if (familyModels.length <= 1) return undefined;
+  if (familyModels.length <= 1) {
+    return buildSchemaModeSmartFamily(selectedModel);
+  }
 
   const modeDefinitions = familyModels
     .map(getVideoModeDefinition)
@@ -711,6 +798,17 @@ function buildDynamicVideoSmartFamily(
       );
     },
   };
+}
+
+function filterSmartExcludedFields(
+  fields: FormFieldConfig[],
+  family: SmartFormFamily,
+): FormFieldConfig[] {
+  const excluded = new Set(
+    (family.excludeFields ?? []).map((name) => name.toLowerCase()),
+  );
+  if (excluded.size === 0) return fields;
+  return fields.filter((field) => !excluded.has(field.name.toLowerCase()));
 }
 
 function get3DModeDefinition(model: Model): ThreeDModeDefinition {
@@ -1300,8 +1398,12 @@ function isSmartTriggerField(
 function tuneSeedance20Fields(
   fields: FormFieldConfig[],
   mode: string,
+  modelId?: string,
 ): FormFieldConfig[] {
   const isEdit = mode === "edit";
+  const isUnifiedDoubaoSeedance = String(modelId || "")
+    .toLowerCase()
+    .startsWith("doubao-seedance-2.0");
   const editVideoNames = [
     "video",
     "videos",
@@ -1322,10 +1424,14 @@ function tuneSeedance20Fields(
     "input_audio_url",
     "input_audio_urls",
   ];
+  const internalFieldNames = ["model", "mode", "pricing_key"];
   const hiddenNames = new Set(
-    isEdit
-      ? [
-          "image",
+    isUnifiedDoubaoSeedance
+      ? internalFieldNames
+      : isEdit
+        ? [
+            ...internalFieldNames,
+            "image",
           "images",
           "image_url",
           "image_urls",
@@ -1355,9 +1461,9 @@ function tuneSeedance20Fields(
           "reference_audios",
           "reference_audio_url",
           "reference_audio_urls",
-          ...genericAudioNames,
-        ]
-      : [...editVideoNames, ...genericAudioNames],
+            ...genericAudioNames,
+          ]
+        : [...internalFieldNames, ...editVideoNames, ...genericAudioNames],
   );
 
   const getCanonicalName = (field: FormFieldConfig) => {
@@ -1402,6 +1508,12 @@ function tuneSeedance20Fields(
     ) {
       return "seedance-reference-image";
     }
+    if (
+      isUnifiedDoubaoSeedance &&
+      ["video_urls", "videos"].includes(name)
+    ) {
+      return "seedance-reference-video";
+    }
     if (editVideoNames.includes(name)) return "seedance-edit-video";
     if (genericAudioNames.includes(name)) return "seedance-audio";
     return name;
@@ -1415,6 +1527,9 @@ function tuneSeedance20Fields(
     if (canonicalName === "seedance-start-image") return 1;
     if (canonicalName === "seedance-end-image") return 2;
     if (canonicalName === "seedance-reference-image") return 3;
+    if (canonicalName === "seedance-reference-video") return 4;
+    if (canonicalName === "seedance-audio") return 5;
+    if (name === "image_with_roles") return 2;
     if (
       [
         "reference_video",
@@ -1460,6 +1575,18 @@ function tuneSeedance20Fields(
         };
       }
       if (getCanonicalName(field) === "seedance-start-image") {
+        if (
+          !field.required &&
+          ["images", "image_urls", "input_images", "input_image_urls"].includes(
+            name,
+          )
+        ) {
+          return {
+            ...field,
+            label: "参考图像",
+            description: "可选，用于引导视觉风格、人物或场景。",
+          };
+        }
         return {
           ...field,
           label: "起始图像",
@@ -1478,6 +1605,20 @@ function tuneSeedance20Fields(
           ...field,
           label: "参考图像",
           description: "可选，用于引导视觉风格、人物或场景。",
+        };
+      }
+      if (name === "image_with_roles") {
+        return {
+          ...field,
+          label: "首尾帧/角色图片",
+          description: "可选，指定 first_frame、last_frame 或 reference_image。",
+        };
+      }
+      if (getCanonicalName(field) === "seedance-reference-video") {
+        return {
+          ...field,
+          label: "参考视频",
+          description: "可选，最多 3 个参考视频。",
         };
       }
       if (
@@ -1794,8 +1935,9 @@ export function PlaygroundPage({
 
   const filteredModels = useMemo(() => {
     if (workspace === "avatar") {
-      return models.filter((model) =>
-        isCuratedGeneratorModel(workspace, model.model_id),
+      return models.filter(
+        (model) =>
+          !isTextOnlyModel(model) && getModelWorkspace(model) === workspace,
       );
     }
     if (workspace === "audio" && apiServiceId !== "one-api") {
@@ -1803,7 +1945,10 @@ export function PlaygroundPage({
         isCuratedGeneratorModel(workspace, model.model_id),
       );
     }
-    return models.filter((model) => getModelWorkspace(model) === workspace);
+    return models.filter(
+      (model) =>
+        !isTextOnlyModel(model) && getModelWorkspace(model) === workspace,
+    );
   }, [apiServiceId, models, workspace]);
   const workspaceTabs = useMemo(
     () => tabs.filter((tab) => tab.workspace === workspace),
@@ -2005,7 +2150,19 @@ export function PlaygroundPage({
   const smartVisibleFields = useMemo(() => {
     if (!activeSmartFamily || smartVariantModels.length === 0) return undefined;
     if (activeSmartFamily.category === "video" && smartResolvedModel) {
-      return extractModelFormFields(smartResolvedModel);
+      const fields = extractModelFormFields(smartResolvedModel);
+      if (isSeedance20ModelId(smartResolvedModel.model_id)) {
+        return filterSmartExcludedFields(
+          tuneSeedance20Fields(
+            fields,
+            activeSmartToggleValues.mode ??
+              getVideoModeDefinition(smartResolvedModel).mode,
+            smartResolvedModel.model_id,
+          ),
+          activeSmartFamily,
+        );
+      }
+      return filterSmartExcludedFields(fields, activeSmartFamily);
     }
     if (activeSmartFamily.category === "3d" && smartResolvedModel) {
       return tune3DFields(
@@ -2047,10 +2204,14 @@ export function PlaygroundPage({
       visibleFields.push(resolvedField);
     }
 
-    if (activeSmartFamily.id === "seedance-2.0") {
+    if (
+      activeSmartFamily.id === "seedance-2.0" ||
+      (smartResolvedModel && isSeedance20ModelId(smartResolvedModel.model_id))
+    ) {
       return tuneSeedance20Fields(
         visibleFields,
         activeSmartToggleValues.mode ?? "generate",
+        smartResolvedModel?.model_id,
       );
     }
 
@@ -2069,23 +2230,59 @@ export function PlaygroundPage({
     smartVariantModels,
   ]);
 
+  const formFieldsOverride = useMemo(() => {
+    if (smartVisibleFields) return smartVisibleFields;
+    const selectedModel = activeTab?.selectedModel;
+    if (
+      workspace === "video" &&
+      selectedModel &&
+      isSeedance20ModelId(selectedModel.model_id)
+    ) {
+      return tuneSeedance20Fields(
+        activeTab.formFields,
+        getVideoModeDefinition(selectedModel).mode,
+        selectedModel.model_id,
+      );
+    }
+    return undefined;
+  }, [
+    activeTab?.formFields,
+    activeTab?.selectedModel,
+    smartVisibleFields,
+    workspace,
+  ]);
+
   const runModel = smartResolvedModel ?? activeTab?.selectedModel ?? null;
 
   const runFields = useMemo(() => {
     if (!activeTab) return [];
+    if (formFieldsOverride) return formFieldsOverride;
     return smartResolvedModel
       ? extractModelFormFields(smartResolvedModel)
       : activeTab.formFields;
-  }, [activeTab, smartResolvedModel]);
+  }, [activeTab, formFieldsOverride, smartResolvedModel]);
 
   const runFormValues = useMemo(() => {
     if (!activeTab) return {};
-    const mappedValues =
-      activeSmartFamily?.mapValues && runModel
-        ? activeSmartFamily.mapValues(activeTab.formValues, runModel.model_id)
-        : activeTab.formValues;
-    return filterValuesForModelFields(mappedValues, runFields);
-  }, [activeSmartFamily, activeTab, runFields, runModel]);
+    const filteredValues = filterValuesForModelFields(
+      activeTab.formValues,
+      runFields,
+    );
+    if (activeSmartFamily?.mapValues && runModel) {
+      return activeSmartFamily.mapValues(
+        filteredValues,
+        runModel.model_id,
+        activeSmartToggleValues,
+      );
+    }
+    return filteredValues;
+  }, [
+    activeSmartFamily,
+    activeSmartToggleValues,
+    activeTab,
+    runFields,
+    runModel,
+  ]);
 
   // Mobile view state: 'config' or 'output'
   const [mobileView, setMobileView] = useState<"config" | "output">("config");
@@ -2999,7 +3196,7 @@ export function PlaygroundPage({
                   onFieldsChange={setFormFields}
                   onUploadingChange={setUploading}
                   scrollable={false}
-                  fieldsOverride={smartVisibleFields}
+                  fieldsOverride={formFieldsOverride}
                 />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center gap-4 px-6 text-center">

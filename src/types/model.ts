@@ -13,6 +13,8 @@ export interface SchemaProperty {
   minimum?: number;
   maximum?: number;
   enum?: string[];
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
   items?: {
     type: string;
     minItems?: number;
@@ -33,15 +35,12 @@ export interface SchemaProperty {
   // Extended UI hints
   step?: number;
   "x-ui-component"?:
-    | "slider"
-    | "uploader"
-    | "uploaders"
-    | "loras"
-    | "select"
-    | "array";
+    "slider" | "uploader" | "uploaders" | "loras" | "select" | "array";
   "x-accept"?: string;
   "x-placeholder"?: string;
   "x-hidden"?: boolean;
+  "x-order-properties"?: string[];
+  format?: string;
   nullable?: boolean;
   "x-enum"?: string[];
 }
@@ -51,10 +50,20 @@ export interface Model {
   name: string;
   description?: string;
   type?: string;
+  model_type?: string;
+  capability_type?: string;
   base_price?: number;
   discount_rate?: number;
   promotion_discount_rate?: number;
   sort_order?: number;
+  api_endpoints?: Array<{
+    type?: string;
+    method?: string;
+    server?: string;
+    api_path?: string;
+    request_schema?: ModelSchema;
+    response_schema?: Record<string, unknown>;
+  }>;
   api_schema?: {
     openapi?: string;
     info?: Record<string, unknown>;

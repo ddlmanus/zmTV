@@ -21,6 +21,7 @@ export interface SmartFormFamily {
   mapValues?: (
     values: Record<string, unknown>,
     resolvedVariantId: string,
+    toggleValues?: Record<string, string>,
   ) => Record<string, unknown>;
   excludeFields?: string[];
 }

@@ -5,6 +5,7 @@ import { useModelsStore } from "@/stores/modelsStore";
 import {
   getModelWorkspace,
   getWorkspaceRoute,
+  isTextOnlyModel,
   usePlaygroundStore,
 } from "@/stores/playgroundStore";
 import { fuzzySearch } from "@/lib/fuzzySearch";
@@ -294,6 +295,7 @@ export function ExplorePanel({
   const allTypes = useMemo(() => {
     const typeSet = new Set<string>();
     models.forEach((m) => {
+      if (isTextOnlyModel(m)) return;
       if (m.type) typeSet.add(m.type);
     });
     return Array.from(typeSet).sort();
@@ -301,7 +303,7 @@ export function ExplorePanel({
 
   // Filtered + sorted list (synchronous — model list is small enough)
   const filteredModels = useMemo(() => {
-    let result = models;
+    let result = models.filter((m) => !isTextOnlyModel(m));
     if (showFavoritesOnly)
       result = result.filter((m) => isFavorite(m.model_id));
     if (typeFilter) result = result.filter((m) => m.type === typeFilter);

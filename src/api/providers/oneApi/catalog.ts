@@ -42,6 +42,10 @@ interface ProviderCatalogEndpoint {
 }
 
 interface ProviderCatalogItem {
+  public_protocol?: string;
+  execution_mode?: string;
+  create_endpoint?: string;
+  status_endpoint?: string;
   model_id: string;
   name?: string;
   model_type?: string;
@@ -281,6 +285,10 @@ function fallbackPathForEndpointType(endpointType: string) {
     case "images":
       return "/v1/images/generations";
     case "openai-video":
+    case "openai_video":
+    case "videos-generations":
+    case "videos/generations":
+      return "/v1/videos/generations";
     case "video":
       return "/v1/videos";
     case "audio-speech":
@@ -300,10 +308,24 @@ function executionKindForPath(path: string): OneApiExecutionKind {
   const normalized = path.replace(/\/+$/, "").toLowerCase();
   if (normalized === "/v1/images/generations") return "image";
   if (normalized === "/v1/videos") return "video";
+  if (normalized === "/v1/videos/generations") return "video";
   if (normalized === "/v1/audio/speech") return "audio";
   if (normalized === "/v1/responses") return "responses";
   if (normalized === "/v1/chat/completions") return "chat";
   return "unsupported";
+}
+
+function videoRouteOptionsForSubmitPath(submitPath: string) {
+  if (submitPath.endsWith("/generations")) {
+    return {
+      statusPath: "/v1/videos/generations/{task_id}",
+      payloadFormat: "json" as const,
+    };
+  }
+  return {
+    statusPath: "/v1/videos/{task_id}",
+    payloadFormat: "multipart" as const,
+  };
 }
 
 function mediaKindForPricingItem(
@@ -332,9 +354,11 @@ function routeForEndpointType(
   const submitPath =
     normalizeEndpointPath(endpointInfo?.path) ||
     fallbackPathForEndpointType(endpointType);
+  const kind = submitPath ? executionKindForPath(submitPath) : "unsupported";
   return {
-    kind: submitPath ? executionKindForPath(submitPath) : "unsupported",
+    kind,
     submitPath,
+    ...(kind === "video" ? videoRouteOptionsForSubmitPath(submitPath) : {}),
     endpointType,
     mediaKind,
   };
@@ -476,25 +500,73 @@ async function getStandardPricing(client: AxiosInstance) {
 }
 
 function enhancedModel(item: ProviderCatalogItem, sortOrder: number): Model {
+  const apiSchemas = (item.api_endpoints || []).map((endpoint) => ({
+    type: endpoint.type,
+    method: endpoint.method,
+    server: endpoint.server,
+    api_path: endpoint.api_path,
+    request_schema: endpoint.request_schema,
+  }));
+  const requestSchema = apiSchemas.find(
+    (endpoint) => endpoint.request_schema?.properties,
+  )?.request_schema;
   return {
     model_id: item.model_id,
     name: item.name || item.model_id,
     description: item.description,
     type: item.capability_type || item.model_type?.toLowerCase() || "unknown",
+    model_type: item.model_type,
+    capability_type: item.capability_type,
     base_price: item.base_price,
     discount_rate: item.discount_rate,
     promotion_discount_rate: item.promotion_discount_rate,
     sort_order: sortOrder,
+    api_endpoints: item.api_endpoints,
     api_schema: {
-      api_schemas: (item.api_endpoints || []).map((endpoint) => ({
-        type: endpoint.type,
-        method: endpoint.method,
-        server: endpoint.server,
-        api_path: endpoint.api_path,
-        request_schema: endpoint.request_schema,
-      })),
+      api_schemas: apiSchemas,
+      ...(requestSchema
+        ? {
+            components: {
+              schemas: {
+                Request: requestSchema,
+              },
+            },
+          }
+        : {}),
     },
   };
+}
+
+function enhancedRouteForCatalogItem(
+  item: ProviderCatalogItem,
+): OneApiExecutionRoute {
+  const endpoint = item.api_endpoints?.[0];
+  const protocol = String(item.public_protocol || endpoint?.type || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+  const submitPath =
+    normalizeEndpointPath(item.create_endpoint) ||
+    normalizeEndpointPath(endpoint?.api_path);
+  const endpointType = endpoint?.type || item.public_protocol;
+  const looksLikeVideo =
+    protocol === "openai-video" ||
+    /\/v1\/videos(?:\/generations)?$/i.test(submitPath) ||
+    String(endpointType || "").toLowerCase() === "openai_video";
+  if (looksLikeVideo) {
+    const videoSubmitPath = submitPath || "/v1/videos/generations";
+    const videoOptions = videoRouteOptionsForSubmitPath(videoSubmitPath);
+    return {
+      kind: "video",
+      submitPath: videoSubmitPath,
+      statusPath:
+        normalizeEndpointPath(item.status_endpoint) || videoOptions.statusPath,
+      endpointType,
+      mediaKind: "video",
+      payloadFormat: videoOptions.payloadFormat,
+    };
+  }
+  return { kind: "predictions", submitPath: "/v1/predictions" };
 }
 
 function standardModel(
@@ -520,6 +592,8 @@ function standardModel(
     name: item.name || modelId,
     description: item.description || pricingItem?.description,
     type: modelTypeForRoute(route, pricingItem),
+    model_type: item.model_type || pricingItem?.model_type,
+    capability_type: item.capability_type,
     base_price: basePrice,
     discount_rate: item.discount_rate,
     promotion_discount_rate: item.promotion_discount_rate,
@@ -571,9 +645,9 @@ export async function listOneApiModels(
         enhancedModel(item, filtered.length - index),
       );
       const routes = new Map<string, OneApiExecutionRoute>(
-        models.map((model) => [
-          model.model_id,
-          { kind: "predictions", submitPath: "/v1/predictions" },
+        filtered.map((item) => [
+          item.model_id,
+          enhancedRouteForCatalogItem(item),
         ]),
       );
       const pricing = new Map<string, OneApiPricingEntry>(

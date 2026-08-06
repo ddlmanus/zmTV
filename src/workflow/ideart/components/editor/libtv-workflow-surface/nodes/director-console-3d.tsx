@@ -160,6 +160,7 @@ function DirectorAiImportIcon() {
 export function TapNowDirectorConsole3DNode({
   node,
   selected,
+  dragging,
   upstreamNodes = [],
   onUpdateNode,
   onOpenDirectorConsole3D,
@@ -169,6 +170,7 @@ export function TapNowDirectorConsole3DNode({
 }: {
   node: LibTvWorkflowNode
   selected: boolean
+  dragging?: boolean
   upstreamNodes?: DirectorConsoleUpstreamNode[]
   onUpdateNode?: (id: string, patch: Partial<LibTvWorkflowNode["data"]>) => void
   onOpenDirectorConsole3D?: (id: string) => void
@@ -178,7 +180,6 @@ export function TapNowDirectorConsole3DNode({
 }) {
   const [title, setTitle] = useState(String(node.data?.title || "3D 导演台"))
   const [consoleOpen, setConsoleOpen] = useState(false)
-  const previewImageUrl = String(node.data?.previewImageUrl || "").trim()
 
   useEffect(() => {
     setTitle(String(node.data?.title || "3D 导演台"))
@@ -277,62 +278,36 @@ export function TapNowDirectorConsole3DNode({
           background: ZMTV_DIRECTOR_NODE_SURFACE_BACKGROUND,
           border: ZMTV_DIRECTOR_NODE_SURFACE_BORDER,
           borderRadius: 12,
-          backdropFilter: "blur(1.5px)",
-          boxShadow: selected ? ZMTV_DIRECTOR_NODE_SURFACE_SELECTED_SHADOW : ZMTV_DIRECTOR_NODE_SURFACE_SHADOW,
+          backdropFilter: dragging ? "none" : "blur(1.5px)",
+          boxShadow: dragging
+            ? "none"
+            : selected
+              ? ZMTV_DIRECTOR_NODE_SURFACE_SELECTED_SHADOW
+              : ZMTV_DIRECTOR_NODE_SURFACE_SHADOW,
         }}
       >
         <div className="relative flex h-full w-full flex-col items-center justify-center gap-4 px-8 py-8">
-          {previewImageUrl ? (
-            <div className="absolute inset-0 overflow-hidden rounded-xl">
-              <img src={previewImageUrl} alt="构图预览" className="h-full w-full object-cover" draggable={false} />
+          <div className="relative z-10 flex flex-col items-center gap-3 text-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/8 bg-white/[0.06] text-white/45 canvas-light:border-neutral-200 canvas-light:bg-neutral-100 canvas-light:text-neutral-500" aria-hidden="true">
+              <TapNowNodeIcon kind="director-console-3d" size={22} opacity={1} />
             </div>
-          ) : (
-            <>
-              <div className="relative z-10 flex flex-col items-center gap-4 text-center">
-                <div className="flex h-[66px] w-[66px] items-center justify-center" aria-hidden="true">
-                  <span className="text-white/25 canvas-light:text-neutral-400">
-                    <TapNowNodeIcon kind="director-console-3d" size={36} opacity={1} />
-                  </span>
-                </div>
-                <p className="text-center text-[13px] font-normal leading-[18px] text-white/85 canvas-light:text-neutral-600">
-                  在 3D 空间中搭建场景并输出多视角画面
-                </p>
-              </div>
-              <button
-                type="button"
-                className="nodrag relative z-10 flex h-8 min-w-12 items-center justify-center rounded-lg border border-white/8 bg-white/10 px-3 py-1 text-[13px] font-normal leading-[18px] text-white/85 transition-[background,opacity,transform] hover:bg-white/15 canvas-light:border-neutral-200 canvas-light:bg-neutral-100 canvas-light:text-neutral-800 canvas-light:hover:bg-neutral-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
-                onPointerDown={stopWorkflowNodeChromeEvent}
-                onMouseDown={stopWorkflowNodeChromeEvent}
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  handleOpenDirectorConsole()
-                }}
-              >
-                打开 3D 导演台
-              </button>
-            </>
-          )}
-          {previewImageUrl ? (
-            <button
-              type="button"
-              className="nodrag absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-[opacity,transform] hover:opacity-90 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40"
-              style={{ background: "rgba(109,91,208,0.75)", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
-              onPointerDown={stopWorkflowNodeChromeEvent}
-              onMouseDown={stopWorkflowNodeChromeEvent}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                handleOpenDirectorConsole()
-              }}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              进入编辑
-            </button>
-          ) : null}
+            <p className="text-center text-[13px] font-normal leading-[18px] text-white/72 canvas-light:text-neutral-600">
+              3D 导演台
+            </p>
+          </div>
+          <button
+            type="button"
+            className="nodrag relative z-10 flex h-8 min-w-12 items-center justify-center rounded-lg border border-white/8 bg-white/10 px-3 py-1 text-[13px] font-normal leading-[18px] text-white/85 transition-[background,opacity,transform] hover:bg-white/15 canvas-light:border-neutral-200 canvas-light:bg-neutral-100 canvas-light:text-neutral-800 canvas-light:hover:bg-neutral-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+            onPointerDown={stopWorkflowNodeChromeEvent}
+            onMouseDown={stopWorkflowNodeChromeEvent}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleOpenDirectorConsole()
+            }}
+          >
+            打开
+          </button>
         </div>
       </div>
       {consoleOpen ? (

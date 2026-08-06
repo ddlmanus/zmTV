@@ -615,6 +615,8 @@ export interface LibTvWorkflowState {
 
 export const LIBTV_WORKFLOW_NODE_WIDTH = 320;
 const LEGACY_DIRECTOR_CONSOLE_3D_DEFAULT_SIZE = 350;
+const LEGACY_DIRECTOR_CONSOLE_3D_VIDEO_WIDTH = 444;
+const LEGACY_DIRECTOR_CONSOLE_3D_VIDEO_HEIGHT = 250;
 
 function getDefaultNodeFrame(kind: LibTvWorkflowNodeKind) {
   switch (kind) {
@@ -1028,8 +1030,11 @@ export function normalizeLibTvWorkflowState(
           const frame = getDefaultNodeFrame(kind);
           const usesLegacyDirectorDefaultFrame =
             kind === "director-console-3d" &&
-            Number(node.width) === LEGACY_DIRECTOR_CONSOLE_3D_DEFAULT_SIZE &&
-            Number(node.height) === LEGACY_DIRECTOR_CONSOLE_3D_DEFAULT_SIZE;
+            ((Number(node.width) === LEGACY_DIRECTOR_CONSOLE_3D_DEFAULT_SIZE &&
+              Number(node.height) === LEGACY_DIRECTOR_CONSOLE_3D_DEFAULT_SIZE) ||
+              (Number(node.width) === LEGACY_DIRECTOR_CONSOLE_3D_VIDEO_WIDTH &&
+                Number(node.height) ===
+                  LEGACY_DIRECTOR_CONSOLE_3D_VIDEO_HEIGHT));
           const options =
             Array.isArray(node.data?.options) && node.data?.options.length > 0
               ? node.data.options

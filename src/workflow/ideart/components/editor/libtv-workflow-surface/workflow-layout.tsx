@@ -171,6 +171,9 @@ export function getWorkflowSelectionBounds(
 }
 
 export function getWorkflowRenderedNodeFrame(node: LibTvWorkflowNode) {
+  if (node.kind === "director-console-3d") {
+    return getTapNowNodeFrame(node.kind);
+  }
   if (node.kind === "text" && node.data?.componentType === "text-editor") {
     return {
       width: Math.max(

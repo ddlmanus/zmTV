@@ -3,7 +3,7 @@ export interface PredictionResult {
   model: string;
   status: "pending" | "processing" | "completed" | "failed" | "created";
   outputs?: (string | Record<string, unknown>)[];
-  error?: string;
+  error?: string | null;
   has_nsfw_contents?: boolean[];
   created_at?: string;
   timings?: {
@@ -26,8 +26,15 @@ export interface HistoryItem {
   status: "pending" | "processing" | "completed" | "failed" | "created";
   outputs?: (string | Record<string, unknown>)[];
   created_at: string;
+  updated_at?: string;
   execution_time?: number;
   has_nsfw_contents?: boolean[];
+  source?: string;
+  media_type?: "image" | "video" | "audio" | "3d" | "avatar" | "text" | "file";
+  execution_source?: string;
+  provider_base_url?: string;
+  provider_key?: string;
+  error?: string | null;
   // API may return inputs alongside history items
   inputs?: Record<string, unknown>;
   input?: Record<string, unknown>;

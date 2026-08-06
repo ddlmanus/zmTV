@@ -340,6 +340,7 @@ export type WorkflowOverlayNodeData = {
   canvasImageAssets?: ScriptV2CanvasImageAsset[];
   storyboardVideoGroups?: WorkflowStoryboardVideoGroupSummary[];
   isDragging?: boolean;
+  isViewportMoving?: boolean;
   nodeEventsSuppressed?: boolean;
   isSelected?: boolean;
   suppressFloatingControls?: boolean;

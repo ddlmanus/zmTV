@@ -6,6 +6,7 @@ import type { OneApiExecutionRoute } from "./types";
 const DEFAULT_ONE_API_GENERATION_TIMEOUT_MS = 10 * 60 * 1000;
 
 const VIDEO_TASK_PREFIX = "oneapi-video:";
+const VIDEO_TASK_ROUTE_SEPARATOR = "::";
 let syntheticId = 0;
 
 interface PredictionEnvelope {
@@ -73,6 +74,60 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : null;
+}
+
+function unwrapOneApiData(value: unknown): unknown {
+  const record = asRecord(value);
+  if (!record || record.data === undefined) return value;
+  return record.data;
+}
+
+function firstRecord(value: unknown): Record<string, unknown> | null {
+  const data = unwrapOneApiData(value);
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const record = asRecord(item);
+      if (record) return record;
+    }
+    return null;
+  }
+  return asRecord(data);
+}
+
+function stringFromRecord(
+  record: Record<string, unknown> | null,
+  keys: string[],
+): string {
+  if (!record) return "";
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+  return "";
+}
+
+function extractTaskId(value: unknown): string {
+  const topLevel = asRecord(value);
+  const topLevelId = stringFromRecord(topLevel, ["id", "task_id", "taskId"]);
+  if (topLevelId) return topLevelId;
+
+  const record = firstRecord(value);
+  return stringFromRecord(record, ["id", "task_id", "taskId"]);
+}
+
+function extractStatus(value: unknown): unknown {
+  return (
+    asRecord(value)?.status ??
+    firstRecord(value)?.status ??
+    asRecord(firstRecord(value)?.data)?.status
+  );
+}
+
+function extractError(value: unknown): unknown {
+  return asRecord(value)?.error ?? firstRecord(value)?.error;
 }
 
 function toDataUrl(base64: string, mimeType: string) {
@@ -327,24 +382,32 @@ async function runStandardVideo(
   input: Record<string, unknown>,
   options?: { timeout?: number; signal?: AbortSignal },
 ) {
+  const useJsonPayload =
+    route.payloadFormat === "json" ||
+    route.submitPath.replace(/\/+$/, "").endsWith("/generations");
+  const payload = useJsonPayload
+    ? { model, ...input }
+    : await formDataPayload(model, input);
   const response = await client.post<Record<string, unknown>>(
     route.submitPath,
-    await formDataPayload(model, input),
+    payload,
     {
       timeout: options?.timeout,
       signal: options?.signal,
-      headers: { "Content-Type": "multipart/form-data" },
+      ...(useJsonPayload
+        ? {}
+        : { headers: { "Content-Type": "multipart/form-data" } }),
     },
   );
-  const rawId = String(response.data.id || response.data.task_id || "").trim();
+  const rawId = extractTaskId(response.data);
   if (!rawId)
     throw providerError(response.data.error, "One API 视频接口没有返回任务 ID");
   const outputs: string[] = [];
   collectMediaOutputs(response.data, outputs);
   return {
-    id: `${VIDEO_TASK_PREFIX}${encodeURIComponent(rawId)}`,
+    id: `${VIDEO_TASK_PREFIX}${encodeURIComponent(rawId)}${VIDEO_TASK_ROUTE_SEPARATOR}${encodeURIComponent(route.statusPath || "/v1/videos/{task_id}")}`,
     model,
-    status: normalizeStatus(response.data.status || "queued"),
+    status: normalizeStatus(extractStatus(response.data) || "queued"),
     ...(outputs.length > 0 && { outputs }),
   };
 }
@@ -419,29 +482,38 @@ export async function runOneApiPrediction(
 
 function parseVideoTaskId(requestId: string) {
   if (!requestId.startsWith(VIDEO_TASK_PREFIX)) return null;
-  return decodeURIComponent(requestId.slice(VIDEO_TASK_PREFIX.length));
+  const encoded = requestId.slice(VIDEO_TASK_PREFIX.length);
+  const [rawId, statusPath] = encoded.split(VIDEO_TASK_ROUTE_SEPARATOR, 2);
+  return {
+    rawId: decodeURIComponent(rawId),
+    statusPath: statusPath ? decodeURIComponent(statusPath) : "",
+  };
 }
 
 async function getStandardVideoPrediction(
   client: AxiosInstance,
   requestId: string,
   rawId: string,
+  statusPath?: string,
   options?: { signal?: AbortSignal },
 ): Promise<PredictionResult> {
-  const response = await client.get<Record<string, unknown>>(
-    `/v1/videos/${encodeURIComponent(rawId)}`,
-    { signal: options?.signal },
+  const path = (statusPath || "/v1/videos/{task_id}").replace(
+    "{task_id}",
+    encodeURIComponent(rawId),
   );
-  const status = normalizeStatus(response.data.status);
+  const response = await client.get<Record<string, unknown>>(path, {
+    signal: options?.signal,
+  });
+  const status = normalizeStatus(extractStatus(response.data));
   const outputs: string[] = [];
   collectMediaOutputs(response.data, outputs);
   if (status === "completed" && outputs.length === 0) {
     outputs.push(`/v1/videos/${encodeURIComponent(rawId)}/content`);
   }
-  const error = response.data.error;
+  const error = extractError(response.data);
   return {
     id: requestId,
-    model: String(response.data.model || ""),
+    model: stringFromRecord(firstRecord(response.data), ["model"]),
     status,
     ...(outputs.length > 0 && { outputs }),
     ...(error
@@ -460,9 +532,15 @@ export async function getOneApiPrediction(
   requestId: string,
   options?: { signal?: AbortSignal },
 ): Promise<PredictionResult> {
-  const rawVideoId = parseVideoTaskId(requestId);
-  if (rawVideoId) {
-    return getStandardVideoPrediction(client, requestId, rawVideoId, options);
+  const videoTask = parseVideoTaskId(requestId);
+  if (videoTask) {
+    return getStandardVideoPrediction(
+      client,
+      requestId,
+      videoTask.rawId,
+      videoTask.statusPath,
+      options,
+    );
   }
   const response = await client.get<PredictionEnvelope>(
     `/v1/predictions/${encodeURIComponent(requestId)}`,

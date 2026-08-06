@@ -311,6 +311,7 @@ export const LibTvWorkflowSurfaceCanvas = memo(
     const latestFlowEdgesRef = useRef<Edge[]>(flowEdges);
     const renderDragActiveRef = useRef(false);
     const [showEmptyViewportHint, setShowEmptyViewportHint] = useState(false);
+    const [viewportMoving, setViewportMoving] = useState(false);
     const viewportMovingTimeoutRef = useRef<number | null>(null);
     const viewportRef = useRef<Viewport | null>(null);
     const liveVirtualizationFrameRef = useRef<number | null>(null);
@@ -430,27 +431,49 @@ export const LibTvWorkflowSurfaceCanvas = memo(
     const lodRenderNodes = useMemo<Array<Node<WorkflowOverlayNodeData>>>(() => {
       let changed = false;
       const nextNodes = renderNodes.map((flowNode) => {
-        if (flowNode.data.workflowNode.kind !== "video") return flowNode;
-        const candidate = lodCandidateById.get(flowNode.id) || {
-          id: flowNode.id,
+        const baseFlowNode =
+          flowNode.data.isViewportMoving === viewportMoving
+            ? flowNode
+            : {
+                ...flowNode,
+                data: {
+                  ...flowNode.data,
+                  isViewportMoving: viewportMoving,
+                },
+              };
+        if (baseFlowNode !== flowNode) changed = true;
+        if (baseFlowNode.data.workflowNode.kind === "director-console-3d") {
+          return baseFlowNode;
+        }
+        if (baseFlowNode.data.workflowNode.kind !== "video") return baseFlowNode;
+        const candidate = lodCandidateById.get(baseFlowNode.id) || {
+          id: baseFlowNode.id,
         };
         const videoLodMode = resolveLibTvVideoNodeLodMode(
           candidate,
           mountedNodeIds,
           lowDetailMode,
         );
-        if (flowNode.data.videoLodMode === videoLodMode) return flowNode;
+        if (baseFlowNode.data.videoLodMode === videoLodMode) {
+          return baseFlowNode;
+        }
         changed = true;
         return {
-          ...flowNode,
+          ...baseFlowNode,
           data: {
-            ...flowNode.data,
+            ...baseFlowNode.data,
             videoLodMode,
           },
         };
       });
       return changed ? nextNodes : renderNodes;
-    }, [lodCandidateById, lowDetailMode, mountedNodeIds, renderNodes]);
+    }, [
+      lodCandidateById,
+      lowDetailMode,
+      mountedNodeIds,
+      renderNodes,
+      viewportMoving,
+    ]);
     const stableReactFlowNodesRef =
       useRef<Array<Node<WorkflowOverlayNodeData>>>(lodRenderNodes);
     const reactFlowNodes = useMemo(() => {
@@ -644,6 +667,7 @@ export const LibTvWorkflowSurfaceCanvas = memo(
         window.clearTimeout(viewportMovingTimeoutRef.current);
         viewportMovingTimeoutRef.current = null;
       }
+      setViewportMoving(false);
       if (wrapperRef.current?.dataset.viewportMoving === "true") {
         wrapperRef.current.removeAttribute("data-viewport-moving");
         wrapperRef.current.classList.remove("canvas-interacting");
@@ -659,6 +683,7 @@ export const LibTvWorkflowSurfaceCanvas = memo(
           standalone &&
           wrapperRef.current?.dataset.viewportMoving !== "true"
         ) {
+          setViewportMoving(true);
           wrapperRef.current?.setAttribute("data-viewport-moving", "true");
           wrapperRef.current?.classList.add("canvas-interacting");
           emitWorkflowViewportMoving(true);
@@ -723,6 +748,7 @@ export const LibTvWorkflowSurfaceCanvas = memo(
           viewportMovingTimeoutRef.current = null;
         }
         if (wrapperRef.current?.dataset.viewportMoving !== "true") {
+          setViewportMoving(true);
           wrapperRef.current?.setAttribute("data-viewport-moving", "true");
           wrapperRef.current?.classList.add("canvas-interacting");
           emitWorkflowViewportMoving(true);

@@ -1399,6 +1399,34 @@ export function FormField({
           />
         );
 
+      case "object": {
+        const objectValue =
+          value && typeof value === "object" && !Array.isArray(value)
+            ? (value as Record<string, unknown>)
+            : {};
+        return (
+          <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-3">
+            {(field.objectFields || []).map((subField) => (
+              <FormField
+                key={subField.name}
+                field={subField}
+                value={objectValue[subField.name]}
+                onChange={(val) =>
+                  onChange({ ...objectValue, [subField.name]: val })
+                }
+                disabled={disabled}
+                hideLabel={false}
+                compact={compact}
+                tooltipDescription={tooltipDescription}
+                onUploadingChange={onUploadingChange}
+                onUploadFile={onUploadFile}
+                formValues={formValues}
+              />
+            ))}
+          </div>
+        );
+      }
+
       case "loras":
         return (
           <LoraSelector
@@ -1529,13 +1557,14 @@ export function FormField({
           field.type !== "loras" &&
             field.type !== "file" &&
             field.type !== "file-array" &&
-            field.type !== "select" &&
-            field.type !== "string-array" &&
-            field.type !== "object-array" &&
-            "overflow-hidden",
-          error &&
+          field.type !== "select" &&
+          field.type !== "string-array" &&
+          field.type !== "object-array" &&
+          field.type !== "object" &&
+          "overflow-hidden",
+        error &&
             "[&_input]:border-destructive [&_textarea]:border-destructive",
-        )}
+      )}
       >
         {renderInput()}
       </div>

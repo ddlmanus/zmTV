@@ -19,6 +19,10 @@ import {
   validateOneApiCredential,
 } from "@/api/providers/oneApi";
 import { createElectronProxyAdapter } from "@/api/electronProxyAdapter";
+import {
+  recordGenerationHistoryFailure,
+  recordGenerationHistoryFromPrediction,
+} from "@/stores/generationHistoryStore";
 import packageJson from "../../package.json";
 
 export const IDEART_API_BASE_URL_STORAGE_KEY = "ideart_gateway_base_url";
@@ -711,45 +715,84 @@ export class WaveSpeedClient {
     options: RunOptions = {},
   ): Promise<PredictionResult> {
     const { enableSyncMode = false, signal } = options;
+    let submittedPrediction: PredictionResult | null = null;
 
     const throwIfAborted = (): void => {
       if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
     };
 
-    // If sync mode is enabled, add it to input and wait for response (use longer timeout)
-    if (enableSyncMode) {
-      const result = await this.runPrediction(
+    try {
+      const historyContext = {
         model,
-        { ...input, enable_sync_mode: true },
-        {
-          ...(this.usesOneApiProtocol() ? {} : { timeout: 120000 }),
+        inputs: input,
+        source: "api" as const,
+        providerBaseUrl: this.getBaseUrl(),
+        providerKey: resolveApiServiceIdForBaseUrl(this.getBaseUrl()) || undefined,
+      };
+
+      // If sync mode is enabled, add it to input and wait for response (use longer timeout)
+      if (enableSyncMode) {
+        const result = await this.runPrediction(
+          model,
+          { ...input, enable_sync_mode: true },
+          {
+            ...(this.usesOneApiProtocol() ? {} : { timeout: 120000 }),
+            signal,
+          },
+        );
+        submittedPrediction = result;
+        options.onSubmitted?.(result);
+        const completed = await this.persistCompletedPrediction(result, signal);
+        recordGenerationHistoryFromPrediction(completed, historyContext);
+        return completed;
+      }
+
+      throwIfAborted();
+      // Submit prediction
+      const prediction = await this.runPrediction(model, input, { signal });
+      submittedPrediction = prediction;
+      const requestId = prediction.id;
+
+      if (!requestId) {
+        throw new Error("No request ID in response");
+      }
+      options.onSubmitted?.(prediction);
+      recordGenerationHistoryFromPrediction(prediction, historyContext);
+
+      if (prediction.status === "completed") {
+        const completed = await this.persistCompletedPrediction(
+          prediction,
           signal,
-        },
-      );
-      options.onSubmitted?.(result);
-      return this.persistCompletedPrediction(result, signal);
-    }
+        );
+        recordGenerationHistoryFromPrediction(completed, historyContext);
+        return completed;
+      }
+      if (prediction.status === "failed") {
+        throw new APIError(prediction.error || "Prediction failed", {
+          details: prediction,
+        });
+      }
 
-    throwIfAborted();
-    // Submit prediction
-    const prediction = await this.runPrediction(model, input, { signal });
-    const requestId = prediction.id;
-
-    if (!requestId) {
-      throw new Error("No request ID in response");
+      const completed = await this.waitForResult(requestId, options);
+      recordGenerationHistoryFromPrediction(completed, historyContext);
+      return completed;
+    } catch (error) {
+      const isAbort =
+        signal?.aborted ||
+        (error instanceof DOMException && error.name === "AbortError");
+      if (!isAbort) {
+        recordGenerationHistoryFailure({
+          id: submittedPrediction?.id,
+          model,
+          inputs: input,
+          error: error instanceof Error ? error.message : String(error),
+          source: "api",
+          providerBaseUrl: this.getBaseUrl(),
+          providerKey: resolveApiServiceIdForBaseUrl(this.getBaseUrl()) || undefined,
+        });
+      }
+      throw error;
     }
-    options.onSubmitted?.(prediction);
-
-    if (prediction.status === "completed") {
-      return this.persistCompletedPrediction(prediction, signal);
-    }
-    if (prediction.status === "failed") {
-      throw new APIError(prediction.error || "Prediction failed", {
-        details: prediction,
-      });
-    }
-
-    return this.waitForResult(requestId, options);
   }
 
   async waitForResult(
@@ -778,7 +821,18 @@ export class WaveSpeedClient {
         consecutiveErrors = 0; // reset on success
 
         if (result.status === "completed") {
-          return this.persistCompletedPrediction(result, signal);
+          const completed = await this.persistCompletedPrediction(
+            result,
+            signal,
+          );
+          recordGenerationHistoryFromPrediction(completed, {
+            model: completed.model,
+            source: "api",
+            providerBaseUrl: this.getBaseUrl(),
+            providerKey:
+              resolveApiServiceIdForBaseUrl(this.getBaseUrl()) || undefined,
+          });
+          return completed;
         }
 
         if (result.status === "failed") {

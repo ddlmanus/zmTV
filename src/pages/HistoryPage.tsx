@@ -12,8 +12,10 @@ import {
   useXiaohongshuHistoryStore,
   xiaohongshuTaskToHistoryItem,
 } from "@/stores/xiaohongshuHistoryStore";
+import { useGenerationHistoryStore } from "@/stores/generationHistoryStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { usePredictionInputsStore } from "@/stores/predictionInputsStore";
+import { workflowFetch } from "@/workflow/backend/client";
 import { usePageActive } from "@/hooks/usePageActive";
 import { useDeferredClose } from "@/hooks/useDeferredClose";
 import { normalizeApiInputsToFormValues } from "@/lib/schemaToForm";
@@ -148,14 +150,24 @@ function formatDate(dateString: string) {
 
 function getOutputType(
   output: unknown,
+  mediaType?: HistoryItem["media_type"],
 ): "image" | "video" | "audio" | "url" | "json" | "text" {
+  if (mediaType === "image") return "image";
+  if (mediaType === "video" || mediaType === "avatar") return "video";
+  if (mediaType === "audio") return "audio";
+  if (mediaType === "3d") return "json";
   if (typeof output === "object" && output !== null) return "json";
   if (typeof output === "string") {
     if (output.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i)) return "image";
     if (output.match(/\.(mp4|webm|mov|avi|mkv)(\?.*)?$/i)) return "video";
     if (output.match(/\.(mp3|wav|ogg|flac|aac|m4a|wma)(\?.*)?$/i))
       return "audio";
-    if (output.startsWith("http://") || output.startsWith("https://"))
+    if (
+      output.startsWith("http://") ||
+      output.startsWith("https://") ||
+      output.startsWith("zaomeng-workflow://") ||
+      output.startsWith("local-asset://")
+    )
       return "url";
   }
   return "text";
@@ -163,7 +175,7 @@ function getOutputType(
 
 function getPreviewIcon(item: HistoryItem) {
   const firstOutput = item.outputs?.[0];
-  const type = getOutputType(firstOutput);
+  const type = getOutputType(firstOutput, item.media_type);
   switch (type) {
     case "image":
       return Image;
@@ -187,6 +199,10 @@ function isXiaohongshuHistoryItem(item: HistoryItem) {
     item.id.startsWith("xhs-") ||
     String(item.inputs?.source || item.input?.source || "") === "xiaohongshu"
   );
+}
+
+function isLocalGenerationHistoryItem(item: HistoryItem) {
+  return item.source === "local-generation";
 }
 
 // ── Memoized HistoryCard (prevents full-list remount on dialog open/close) ──
@@ -219,6 +235,7 @@ const HistoryCard = memo(function HistoryCard({
   const PreviewIcon = getPreviewIcon(item);
   const hasPreview = item.outputs && item.outputs.length > 0;
   const firstOutput = item.outputs?.[0];
+  const firstOutputType = getOutputType(firstOutput, item.media_type);
   const shouldLoad = loadPreviews && isInView;
 
   const getStatusBadge = (status: string) => {
@@ -268,7 +285,7 @@ const HistoryCard = memo(function HistoryCard({
         {shouldLoad &&
         hasPreview &&
         typeof firstOutput === "string" &&
-        firstOutput.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+        firstOutputType === "image" ? (
           <img
             src={firstOutput}
             alt="Preview"
@@ -279,12 +296,12 @@ const HistoryCard = memo(function HistoryCard({
         ) : shouldLoad &&
           hasPreview &&
           typeof firstOutput === "string" &&
-          firstOutput.match(/\.(mp4|webm|mov)/i) ? (
+          firstOutputType === "video" ? (
           <VideoPreview src={firstOutput} enabled={shouldLoad} />
         ) : shouldLoad &&
           hasPreview &&
           typeof firstOutput === "string" &&
-          firstOutput.match(/\.(mp3|wav|ogg|flac|aac|m4a|wma)/i) ? (
+          firstOutputType === "audio" ? (
           <div
             className="w-full h-full flex items-center justify-center p-3"
             onClick={(e) => e.stopPropagation()}
@@ -415,6 +432,21 @@ export function HistoryPage() {
   const deleteXiaohongshuTask = useXiaohongshuHistoryStore(
     (state) => state.deleteTask,
   );
+  const localGenerationItems = useGenerationHistoryStore(
+    (state) => state.items,
+  );
+  const loadLocalGenerationHistory = useGenerationHistoryStore(
+    (state) => state.load,
+  );
+  const deleteLocalGenerationItem = useGenerationHistoryStore(
+    (state) => state.remove,
+  );
+  const deleteLocalGenerationItems = useGenerationHistoryStore(
+    (state) => state.removeMany,
+  );
+  const upsertLocalGenerationItem = useGenerationHistoryStore(
+    (state) => state.upsert,
+  );
   const { getModelById } = useModelsStore();
   const {
     get: getLocalInputs,
@@ -446,14 +478,30 @@ export function HistoryPage() {
     statusFilter === "all"
       ? localXiaohongshuItems
       : localXiaohongshuItems.filter((item) => item.status === statusFilter);
+  const filteredLocalGenerationItems =
+    statusFilter === "all"
+      ? localGenerationItems
+      : localGenerationItems.filter((item) => item.status === statusFilter);
+  const localItemIds = new Set(
+    [...filteredLocalGenerationItems, ...filteredLocalXiaohongshuItems].map(
+      (item) => item.id,
+    ),
+  );
   const displayItems =
     page === 1
-      ? [...filteredLocalXiaohongshuItems, ...items].sort(
+      ? [
+          ...filteredLocalGenerationItems,
+          ...filteredLocalXiaohongshuItems,
+          ...items.filter((item) => !localItemIds.has(item.id)),
+        ].sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
       : items;
-  const totalDisplayItems = totalItems + filteredLocalXiaohongshuItems.length;
+  const totalDisplayItems =
+    totalItems +
+    filteredLocalGenerationItems.length +
+    filteredLocalXiaohongshuItems.length;
   const totalPages = Math.max(1, Math.ceil(totalDisplayItems / pageSize));
 
   const handleCopyId = async (id: string) => {
@@ -618,39 +666,20 @@ export function HistoryPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [isActive, selectedItem, navigateHistory]);
 
-  const fetchHistory = useCallback(async () => {
-    if (!isValidated) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const filters =
-        statusFilter !== "all"
-          ? {
-              status: statusFilter as
-                | "completed"
-                | "failed"
-                | "processing"
-                | "created",
-            }
-          : undefined;
-
-      const response = await apiClient.getHistory(page, pageSize, filters);
-      setItems(response.items || []);
-      setTotalItems(Number(response.total || 0));
-    } catch (err) {
-      console.error("History fetch error:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch history");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isValidated, page, pageSize, statusFilter]);
-
   const handleDelete = useCallback(
     async (item: HistoryItem) => {
       setIsDeleting(true);
       try {
+        if (isLocalGenerationHistoryItem(item)) {
+          await deleteLocalGenerationItem(item.id);
+          if (selectedItem?.id === item.id) {
+            setSelectedItem(null);
+          }
+          toast({
+            title: t("history.deleted"),
+          });
+          return;
+        }
         if (isXiaohongshuHistoryItem(item)) {
           deleteXiaohongshuTask(item.id);
           if (selectedItem?.id === item.id) {
@@ -684,7 +713,7 @@ export function HistoryPage() {
         setDeleteConfirmItem(null);
       }
     },
-    [deleteXiaohongshuTask, selectedItem?.id, t],
+    [deleteLocalGenerationItem, deleteXiaohongshuTask, selectedItem?.id, t],
   );
 
   const handleBulkDelete = useCallback(async () => {
@@ -693,9 +722,16 @@ export function HistoryPage() {
     const idsToDelete = Array.from(selectedIds);
     const idsSet = new Set(idsToDelete);
     try {
-      const localIds = idsToDelete.filter((id) => id.startsWith("xhs-"));
-      const remoteIds = idsToDelete.filter((id) => !id.startsWith("xhs-"));
-      localIds.forEach(deleteXiaohongshuTask);
+      const localGenerationIds = idsToDelete.filter((id) =>
+        localGenerationItems.some((item) => item.id === id),
+      );
+      const xiaohongshuIds = idsToDelete.filter((id) => id.startsWith("xhs-"));
+      const localIds = new Set([...localGenerationIds, ...xiaohongshuIds]);
+      const remoteIds = idsToDelete.filter((id) => !localIds.has(id));
+      if (localGenerationIds.length > 0) {
+        await deleteLocalGenerationItems(localGenerationIds);
+      }
+      xiaohongshuIds.forEach(deleteXiaohongshuTask);
       if (remoteIds.length > 0) {
         await apiClient.deletePredictions(remoteIds);
       }
@@ -725,7 +761,14 @@ export function HistoryPage() {
       setIsDeleting(false);
       setShowBulkDeleteConfirm(false);
     }
-  }, [deleteXiaohongshuTask, selectedIds, selectedItem, t]);
+  }, [
+    deleteLocalGenerationItems,
+    deleteXiaohongshuTask,
+    localGenerationItems,
+    selectedIds,
+    selectedItem,
+    t,
+  ]);
 
   const handleToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -756,6 +799,97 @@ export function HistoryPage() {
   const handleClearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
+
+  const importWorkflowGeneratedFiles = useCallback(async () => {
+    if (typeof window === "undefined" || !window.electronAPI) return;
+    try {
+      const response = await workflowFetch("/api/files?limit=500", {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const files = await response.json().catch(() => []);
+      if (!Array.isArray(files)) return;
+      await Promise.all(
+        files.map(async (file) => {
+          if (!file || typeof file !== "object") return;
+          const record = file as Record<string, unknown>;
+          const url = String(record.fileUrl || record.url || "").trim();
+          const model = String(record.model || "generated-media").trim();
+          if (!url || !model) return;
+          const providerTaskIds = Array.isArray(record.providerTaskIds)
+            ? record.providerTaskIds
+                .map((id) => String(id || "").trim())
+                .filter(Boolean)
+            : [];
+          const fileType = String(record.fileType || "").toLowerCase();
+          await upsertLocalGenerationItem({
+            id: providerTaskIds[0] || String(record.id || "").trim(),
+            model,
+            status: "completed",
+            outputs: [url],
+            created_at: String(record.createdAt || new Date().toISOString()),
+            source: "local-generation",
+            media_type:
+              fileType === "image" ||
+              fileType === "video" ||
+              fileType === "audio" ||
+              fileType === "3d"
+                ? fileType
+                : "file",
+            execution_source: "workflow",
+            provider_base_url: String(record.providerBaseUrl || "").trim(),
+            provider_key: String(record.providerKey || "").trim(),
+            updated_at: new Date().toISOString(),
+            error: null,
+          });
+        }),
+      );
+    } catch (err) {
+      console.warn("Failed to import workflow generated files:", err);
+    }
+  }, [upsertLocalGenerationItem]);
+
+  const fetchHistory = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await loadLocalGenerationHistory(true);
+      await importWorkflowGeneratedFiles();
+      if (!isValidated) {
+        setItems([]);
+        setTotalItems(0);
+        return;
+      }
+
+      const filters =
+        statusFilter !== "all"
+          ? {
+              status: statusFilter as
+                | "completed"
+                | "failed"
+                | "processing"
+                | "created",
+            }
+          : undefined;
+
+      const response = await apiClient.getHistory(page, pageSize, filters);
+      setItems(response.items || []);
+      setTotalItems(Number(response.total || 0));
+    } catch (err) {
+      console.error("History fetch error:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch history");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    importWorkflowGeneratedFiles,
+    isValidated,
+    loadLocalGenerationHistory,
+    page,
+    pageSize,
+    statusFilter,
+  ]);
 
   // Load API key and prediction inputs on mount
   useEffect(() => {
@@ -1147,6 +1281,7 @@ export function HistoryPage() {
                       outputs={deferredSelectedItem.outputs}
                       error={null}
                       isLoading={false}
+                      outputMediaType={deferredSelectedItem.media_type}
                     />
                   </div>
                 )}

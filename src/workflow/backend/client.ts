@@ -12,6 +12,7 @@ const WORKFLOW_BACKEND_PREFIXES = [
   "/api/chat/transcribe-audio",
   "/api/seedance",
   "/api/platform",
+  "/api/files",
   "/api/skill-library",
   "/api/kling",
   "/api/workflow-presets",

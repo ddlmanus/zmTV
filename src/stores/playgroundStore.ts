@@ -98,6 +98,25 @@ const PLAYGROUND_SESSION_KEY = "wavespeed_playground_session_v1";
 
 export type PlaygroundWorkspace = "image" | "video" | "avatar" | "audio" | "3d";
 
+export function isTextOnlyModel(
+  model?: Pick<Model, "type" | "model_type" | "capability_type" | "model_id"> | null,
+): boolean {
+  const fields = [
+    model?.model_type,
+    model?.capability_type,
+    model?.type,
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+  return fields.some(
+    (value) =>
+      value === "text" ||
+      value === "text-to-text" ||
+      value === "chat" ||
+      value === "llm",
+  );
+}
+
 const WORKSPACE_KEYWORDS: Record<PlaygroundWorkspace, string[]> = {
   avatar: [
     "avatar",
@@ -140,14 +159,32 @@ const WORKSPACE_KEYWORDS: Record<PlaygroundWorkspace, string[]> = {
 };
 
 export function getModelWorkspace(
-  model?: Pick<Model, "model_id" | "type"> | null,
+  model?: Pick<Model, "model_id" | "type" | "model_type" | "capability_type"> | null,
 ): PlaygroundWorkspace {
   if (isCuratedGeneratorModel("avatar", model?.model_id)) {
     return "avatar";
   }
 
-  const haystack =
-    `${model?.type ?? ""} ${model?.model_id ?? ""}`.toLowerCase();
+  const catalogType = String(model?.model_type || "").trim().toLowerCase();
+  const capabilityType = String(model?.capability_type || "").trim().toLowerCase();
+  if (
+    catalogType === "digital-human" ||
+    catalogType === "digital_human" ||
+    capabilityType === "digital-human" ||
+    capabilityType === "digital_human"
+  ) {
+    return "avatar";
+  }
+
+  const haystack = [
+    model?.model_type,
+    model?.capability_type,
+    model?.type,
+    model?.model_id,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 
   if (WORKSPACE_KEYWORDS.avatar.some((keyword) => haystack.includes(keyword))) {
     return "avatar";
@@ -223,8 +260,14 @@ function parsePlaygroundSession(
       (t: PersistedPlaygroundTab) => ({
         id: t.id,
         createdAt: t.createdAt ?? Date.now(),
-        workspace: t.workspace ?? getModelWorkspace(t.selectedModel),
-        selectedModel: t.selectedModel ?? null,
+        workspace:
+          t.workspace ??
+          (isTextOnlyModel(t.selectedModel)
+            ? "image"
+            : getModelWorkspace(t.selectedModel)),
+        selectedModel: isTextOnlyModel(t.selectedModel)
+          ? null
+          : t.selectedModel ?? null,
         formValues: t.formValues ?? {},
         formFields: t.formFields ?? [],
         validationErrors: {},

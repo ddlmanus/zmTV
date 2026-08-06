@@ -157,6 +157,41 @@ function formatType(type: string): string {
     .join(" ");
 }
 
+function getVideoTierLabel(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.includes("-turbo-pro")) return "Turbo Pro";
+  if (id.includes("-turbo-std") || id.includes("-turbo-standard"))
+    return "Turbo STD";
+  if (id.includes("-turbo")) return "Turbo";
+  if (id.includes("-master")) return "Master";
+  if (id.includes("-4k")) return "4K";
+  if (id.includes("-pro")) return "Pro";
+  if (id.includes("-std") || id.includes("-standard")) return "STD";
+  return "";
+}
+
+function getKlingFeatureLabel(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.includes("motion-control")) return "Motion Control";
+  if (id.includes("-omni") || id.endsWith("omni")) return "Omni";
+  if (id.includes("-face") || id.endsWith("face")) return "Face";
+  return "";
+}
+
+function getSoraBaseLabel(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.includes("sora-2-preview")) return "Sora 2 Preview";
+  if (id.includes("sora-2-pro")) return "Sora 2 Pro";
+  return "Sora 2";
+}
+
+function joinModelNameParts(parts: string[]): string {
+  const cleaned = parts
+    .map((part) => part.trim())
+    .filter((part, index, arr) => part && arr.indexOf(part) === index);
+  return cleaned.join(" · ");
+}
+
 /**
  * Get a short display label for a variant within its base family group.
  * Shows the distinguishing parts: family suffix + path suffix.
@@ -213,10 +248,34 @@ function getVideoDisplayName(model: Model): string {
   if (id.includes("wan-2.6")) return "WAN 2.6";
   if (id.includes("wan-2.5")) return "WAN 2.5";
   if (id.includes("wan-2.2-spicy")) return "WAN 2.2 Spicy";
-  if (id.includes("kling-v3") || id.includes("kling-3")) return "Kling 3.0";
-  if (id.includes("kling-o3")) return "Kling O3";
-  if (id.includes("kling-v2.6") || id.includes("kling-2.6")) return "Kling 2.6";
-  if (id.includes("sora-2")) return "Sora 2";
+  if (id.includes("kling-v3") || id.includes("kling-3")) {
+    const feature = getKlingFeatureLabel(model.model_id);
+    return joinModelNameParts([
+      feature ? `Kling 3.0 ${feature}` : "Kling 3.0",
+      getVideoTierLabel(model.model_id),
+    ]);
+  }
+  if (id.includes("kling-o3")) {
+    const feature = getKlingFeatureLabel(model.model_id);
+    return joinModelNameParts([
+      feature ? `Kling O3 ${feature}` : "Kling O3",
+      getVideoTierLabel(model.model_id),
+    ]);
+  }
+  if (id.includes("kling-v2.6") || id.includes("kling-2.6")) {
+    const feature = getKlingFeatureLabel(model.model_id);
+    return joinModelNameParts([
+      feature ? `Kling 2.6 ${feature}` : "Kling 2.6",
+      getVideoTierLabel(model.model_id),
+    ]);
+  }
+  if (id.includes("sora-2")) {
+    const baseLabel = getSoraBaseLabel(model.model_id);
+    return joinModelNameParts([
+      baseLabel,
+      baseLabel.includes("Pro") ? "" : getVideoTierLabel(model.model_id),
+    ]);
+  }
   if (id.includes("veo-3.1-lite")) return "Veo 3.1 Lite";
   if (id.includes("veo-3.1")) return "Veo 3.1";
   if (id.includes("vidu-q3")) return "Vidu Q3";

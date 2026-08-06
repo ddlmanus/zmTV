@@ -73,6 +73,7 @@ export function TapNowThreeDNode({
   node,
   selected,
   showFloatingControls,
+  dragging,
   upstreamNodes = [],
   onUpdateNode,
   onReferenceFilesUploaded,
@@ -357,7 +358,10 @@ export function TapNowThreeDNode({
         ) : null}
       </div>
 
-      {showFloatingControls && !running && !node.data?.suppressGenerationBar ? (
+      {showFloatingControls &&
+      !dragging &&
+      !running &&
+      !node.data?.suppressGenerationBar ? (
         <ThreeDGenerationBar
           prompt={prompt}
           modelId={String(node.data?.modelId || "")}

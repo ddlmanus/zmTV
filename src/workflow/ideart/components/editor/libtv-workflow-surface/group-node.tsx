@@ -80,6 +80,7 @@ export function TapNowGroupNode({
   node,
   selected,
   showFloatingControls,
+  dragging = false,
   childNodes,
   onUpdateNode,
   onMoveNode,
@@ -100,6 +101,7 @@ export function TapNowGroupNode({
   node: LibTvWorkflowNode;
   selected: boolean;
   showFloatingControls: boolean;
+  dragging?: boolean;
   childNodes?: LibTvWorkflowNode[];
   onUpdateNode?: (
     id: string,
@@ -1467,6 +1469,7 @@ export function TapNowGroupNode({
       {imageGroupCollapsed &&
       isImageGeneratorResultGroup &&
       !videoBatchMode &&
+      !dragging &&
       !node.data?.suppressGenerationBar ? (
         <div
           className="node-floating-ui nodrag nopan nowheel pointer-events-auto absolute left-1/2 z-30 flex w-max -translate-x-1/2 flex-nowrap items-center gap-0"
@@ -1548,7 +1551,15 @@ export function TapNowGroupNode({
         <div
           className={`pointer-events-none h-full w-full rounded-2xl p-1 ${imageGroupCollapsed ? "overflow-hidden" : "overflow-visible"}`}
         >
-          {imageGeneratorRunning ? (
+          {dragging && isImageGeneratorResultGroup ? (
+            <div className="absolute inset-1 flex flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#202023] text-center text-white/62">
+              <ImageIcon className="size-6 text-white/34" />
+              <span className="text-[13px] font-medium">图片结果组</span>
+              <span className="text-[11px] text-white/38">
+                {completedImageChildren.length || imageChildren.length} 张
+              </span>
+            </div>
+          ) : imageGeneratorRunning ? (
             <div className="absolute inset-1 overflow-hidden rounded-xl bg-[#202023]">
               <WorkflowImageGenerationPlaceholder
                 progress={imageGeneratorProgress}
