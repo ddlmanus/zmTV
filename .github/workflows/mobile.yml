@@ -282,11 +282,13 @@ jobs:
           echo "✅ mobile/package.json → $VERSION"
 
           # Update build.gradle versionName and versionCode
-          # versionCode formula: major * 10000 + minor * 100 + patch
+          # Preserve the existing 202xx Android versionCode series. The +100
+          # compatibility offset prevents upgrades from dropping below v2.1.9
+          # (versionCode 20209), which Android would reject.
           MAJOR=$(echo $VERSION | cut -d. -f1)
           MINOR=$(echo $VERSION | cut -d. -f2)
           PATCH=$(echo $VERSION | cut -d. -f3)
-          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH))
+          VERSION_CODE=$((MAJOR * 10000 + MINOR * 100 + PATCH + 100))
 
           sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" mobile/android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" mobile/android/app/build.gradle

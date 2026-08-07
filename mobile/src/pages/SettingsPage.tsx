@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useApiKeyStore } from "@/stores/apiKeyStore";
-import { ZAOMENG_OPEN_API_BASE_URL, apiClient } from "@/api/client";
+import { ZAOMENG_OPEN_API_BASE_URL } from "@/api/client";
 import { useApiServiceStore } from "@/stores/apiServiceStore";
 import { useThemeStore, type Theme } from "@/stores/themeStore";
 import { languages } from "@/i18n";
@@ -64,6 +64,7 @@ import {
   Settings,
   ExternalLink,
 } from "lucide-react";
+import packageJson from "../../package.json";
 
 interface CacheItem {
   cacheName: string;
@@ -94,10 +95,6 @@ export function SettingsPage() {
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Balance state
-  const [balance, setBalance] = useState<number | null>(null);
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-
   // Cache state
   const [cacheSize, setCacheSize] = useState<number | null>(null);
   const [isClearingCache, setIsClearingCache] = useState(false);
@@ -125,8 +122,7 @@ export function SettingsPage() {
     releaseNotes?: string;
   } | null>(null);
 
-  // Current app version - keep in sync with package.json and build.gradle
-  const currentVersion = "2.1.9";
+  const currentVersion = packageJson.version;
 
   // (APK download progress state removed - now opens browser directly)
 
@@ -209,24 +205,6 @@ export function SettingsPage() {
       setCacheSize(0);
     }
   }, []);
-
-  // Fetch account balance
-  const fetchBalance = useCallback(async () => {
-    if (!isValidated) return;
-    setIsLoadingBalance(true);
-    try {
-      const bal = await apiClient.getBalance();
-      setBalance(bal);
-    } catch {
-      toast({
-        title: t("common.error"),
-        description: t("settings.balance.refreshFailed"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingBalance(false);
-    }
-  }, [isValidated, t]);
 
   // Delete a single cache item
   const handleDeleteCacheItem = useCallback(
@@ -874,15 +852,6 @@ export function SettingsPage() {
     loadCacheDetails();
   }, [loadCacheDetails, loadServiceConfig]);
 
-  // Fetch balance when authenticated
-  useEffect(() => {
-    if (isValidated) {
-      fetchBalance();
-    } else {
-      setBalance(null);
-    }
-  }, [isValidated, fetchBalance]);
-
   // Check for updates on mount (only once per session)
   useEffect(() => {
     const hasCheckedUpdate = sessionStorage.getItem("wavespeed_update_checked");
@@ -967,8 +936,7 @@ export function SettingsPage() {
             <div>
               <CardTitle>API 服务</CardTitle>
               <CardDescription>
-                模型、生成、上传、任务轮询、余额和历史记录统一使用造梦 API
-                开放平台。
+                模型、生成、上传、任务轮询和历史记录统一使用造梦 API 开放平台。
               </CardDescription>
             </div>
             <Badge variant="secondary" className="shrink-0">
@@ -1074,44 +1042,6 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      {isValidated && (
-        <Card className="mt-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>{t("settings.balance.title")}</CardTitle>
-                <CardDescription>
-                  {t("settings.balance.description")}
-                </CardDescription>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={fetchBalance}
-                disabled={isLoadingBalance}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isLoadingBalance ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">
-                {isLoadingBalance ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : balance !== null ? (
-                  `$${balance.toFixed(2)}`
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <Card className="mt-6">
         <CardHeader>
