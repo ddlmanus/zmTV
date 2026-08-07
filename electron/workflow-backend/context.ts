@@ -2,6 +2,7 @@ import type { WorkflowBackendProviderConfig } from "./server";
 import { WorkflowJsonStore } from "./storage";
 
 export type WorkflowBackendContext = {
+  appRoot: string;
   runtimeRoot: string;
   resourcesRoot: string;
   store: WorkflowJsonStore;

@@ -5,6 +5,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import type { WorkflowBackendContext } from "./context";
 import { registerAssetRoutes } from "./routes/assets";
+import { registerBuiltinAssetRoutes } from "./routes/builtin-assets";
 import { registerChatToolRoutes } from "./routes/chat-tools";
 import { registerDirectorAgentRoutes } from "./routes/director-agent";
 import { registerGenerationRoutes } from "./routes/generation";
@@ -211,6 +212,7 @@ function withCors(response: Response) {
 
 function createWorkflowApp(options: WorkflowBackendOptions) {
   const context: WorkflowBackendContext = {
+    appRoot: options.appRoot,
     runtimeRoot: options.runtimeRoot,
     resourcesRoot: options.resourcesRoot,
     store: new WorkflowJsonStore(path.join(options.runtimeRoot, "data")),
@@ -220,6 +222,7 @@ function createWorkflowApp(options: WorkflowBackendOptions) {
     runCodexTask,
   };
   const app = new Hono();
+  registerBuiltinAssetRoutes(app, context);
   registerProjectRoutes(app, context);
   registerAssetRoutes(app, context);
   registerSkillLibraryRoutes(app, context);

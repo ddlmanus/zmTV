@@ -407,7 +407,9 @@ type DirectorSceneTreeContextMenu = {
 } | null
 
 function directorCharacterAssetUrl(filename: string) {
-  return `/assets/3d-characters/${encodeURIComponent(filename)}`
+  return workflowResourceUrl(
+    `/api/workflow-assets/3d-characters/${encodeURIComponent(filename)}`,
+  )
 }
 
 function getDirectorConsoleImageRenderUrl(src: string) {

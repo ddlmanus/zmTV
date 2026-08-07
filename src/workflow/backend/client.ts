@@ -116,6 +116,7 @@ export function workflowResourceUrl(value: string) {
     );
   }
   const resourcePrefixes = [
+    "/api/workflow-assets",
     "/api/image-proxy",
     "/api/video-proxy",
     "/api/workflow-backend/files",
